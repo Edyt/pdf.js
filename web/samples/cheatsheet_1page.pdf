@@ -1,0 +1,134 @@
+%PDF-1.4
+%цдья
+1 0 obj
+<<
+/Type /Catalog
+/Version /1.4
+/Pages 2 0 R
+/OCProperties 3 0 R
+/Names 4 0 R
+>>
+endobj
+2 0 obj
+<<
+/Type /Pages
+/Kids [5 0 R]
+/Count 1
+>>
+endobj
+3 0 obj
+<<
+/OCGs [6 0 R]
+/D 7 0 R
+>>
+endobj
+4 0 obj
+<<
+/EmbeddedFiles 8 0 R
+>>
+endobj
+5 0 obj
+<<
+/Type /Page
+/MediaBox [0.0 0.0 595.27563 841.8898]
+/Resources 9 0 R
+/Contents 10 0 R
+/Parent 2 0 R
+>>
+endobj
+6 0 obj
+<<
+/Type /OCG
+/Name (external page0)
+>>
+endobj
+7 0 obj
+<<
+/Order [6 0 R]
+>>
+endobj
+8 0 obj
+<<
+/Names [(X0) 11 0 R]
+>>
+endobj
+9 0 obj
+<<
+/Properties 12 0 R
+/XObject <<
+/Form0 13 0 R
+>>
+>>
+endobj
+10 0 obj
+<<
+/Length 14 0 R
+>>
+stream
+/OC /MC0 BDC
+q
+ 1 0 0 1 0 0 cm
+ /Form0 Do
+Q
+EMC
+
+endstream
+endobj
+11 0 obj
+<<
+/Type /Filespec
+/F (https://upload.wikimedia.org/wikipedia/commons/0/05/Cheatsheet-en.pdf)
+/FS /URL
+/Page 1
+>>
+endobj
+12 0 obj
+<<
+/MC0 6 0 R
+>>
+endobj
+13 0 obj
+<<
+/Type /XObject
+/Subtype /Form
+/Ref 11 0 R
+/BBox [0.0 0.0 595.27563 841.8898]
+/Length 15 0 R
+>>
+stream
+
+endstream
+endobj
+14 0 obj
+48
+endobj
+15 0 obj
+0
+endobj
+xref
+0 16
+0000000000 65535 f
+0000000015 00000 n
+0000000111 00000 n
+0000000168 00000 n
+0000000212 00000 n
+0000000254 00000 n
+0000000374 00000 n
+0000000429 00000 n
+0000000465 00000 n
+0000000507 00000 n
+0000000576 00000 n
+0000000681 00000 n
+0000000811 00000 n
+0000000844 00000 n
+0000000978 00000 n
+0000000997 00000 n
+trailer
+<<
+/Root 1 0 R
+/ID [<054120C0AA20A299C435A1367C3F75C7> <054120C0AA20A299C435A1367C3F75C7>]
+/Size 16
+>>
+startxref
+1015
+%%EOF

@@ -255,11 +255,11 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                 ]);
 
                 var partialEvaluator = new PartialEvaluator(manager, page.xref,
-                                                    preprocessor.handler,
-                                                    page.pageIndex,
-                                                    'p' + page.pageIndex + '_',
-                                                    page.idCounters,
-                                                    page.fontCache);
+                                            preprocessor.handler,
+                                            preprocessor.pageIndex,
+                                            'p' + preprocessor.pageIndex + '_',
+                                            page.idCounters,
+                                            page.fontCache);
 
                 var dataPromises = Promise.all([contentStreamPromise,
                                                 resourcesPromise]);

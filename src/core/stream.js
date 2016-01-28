@@ -138,6 +138,41 @@ var Stream = (function StreamClosure() {
   return Stream;
 })();
 
+var NetworkStream = (function NetworkStreamClosure() {
+  function NetworkStream(url, dict) {
+    this.url = url;
+    this.receivedData = false;
+    this.data = [];
+    try {
+      var req = new XMLHttpRequest();
+      req.open('GET', url, false);
+      req.responseType = 'arraybuffer';
+      req.send(null);
+      var length = 0;
+      var bytes;
+      if(req.status === 200) {
+        this.data = new Uint8Array(req.response);
+        length = parseInt(req.getResponseHeader('Content-Length'));
+        Stream.call(this, this.data, 0, length, dict);
+      } else {
+        Stream.call(this, this.data, 0, 0, dict);
+      }
+    } catch (err) {
+      warn(err);
+      Stream.call(this, this.data, 0, 0, dict);
+    }
+  }
+
+  NetworkStream.prototype = Object.create(Stream.prototype);
+
+  NetworkStream.prototype.getRemainingLength =
+    function NetWorkStream_getRemainingLength() {
+      return this.end - this.pos;
+    };
+
+  return NetworkStream;
+})();
+
 var StringStream = (function StringStreamClosure() {
   function StringStream(str) {
     var length = str.length;
@@ -2522,6 +2557,7 @@ exports.FlateStream = FlateStream;
 exports.Jbig2Stream = Jbig2Stream;
 exports.JpegStream = JpegStream;
 exports.JpxStream = JpxStream;
+exports.NetworkStream = NetworkStream;
 exports.NullStream = NullStream;
 exports.PredictorStream = PredictorStream;
 exports.RunLengthStream = RunLengthStream;

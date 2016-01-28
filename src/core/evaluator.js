@@ -64,6 +64,7 @@ var isRef = corePrimitives.isRef;
 var isStream = corePrimitives.isStream;
 var DecodeStream = coreStream.DecodeStream;
 var JpegStream = coreStream.JpegStream;
+var NetworkStream = coreStream.NetworkStream;
 var Lexer = coreParser.Lexer;
 var Parser = coreParser.Parser;
 var isEOF = coreParser.isEOF;
@@ -221,6 +222,75 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
       }
 
       operatorList.addOp(OPS.paintFormXObjectBegin, [matrix, bbox]);
+
+      var stream = xobj;
+      var ref = xobj.dict.get('Ref');
+      if (isDict(ref)) {
+        var fs = ref.get('FS');
+        var url = ref.get('F');
+        var pageNum = (ref.get('Page') || 1) - 1;
+        if(isName(fs) && fs.name === 'URL' && isString(url)) {
+          stream = new NetworkStream(url, xobj.dict);
+          var manager = this.pdfManager.
+                                createRefXObjectManager(url, stream);
+          var preprocessor = this;
+          return new Promise(function parseExternalDoc(resolve) {
+            var parseSuccess = function parseSuccess() {
+              if (pageNum >= manager.pdfDocument.numPages) {
+                pageNum = 0;
+              }
+              manager.pdfDocument.getPage(pageNum).then(function(page) {
+
+                var contentStreamPromise = manager.ensure(page,
+                                          'getContentStream', []);
+                var resourcesPromise = page.loadResources([
+                  'ExtGState',
+                  'ColorSpace',
+                  'Pattern',
+                  'Shading',
+                  'XObject',
+                  'Font'
+                  // ProcSet
+                  // Properties
+                ]);
+
+                var partialEvaluator = new PartialEvaluator(manager, page.xref,
+                                                    preprocessor.handler,
+                                                    page.pageIndex,
+                                                    'p' + page.pageIndex + '_',
+                                                    page.idCounters,
+                                                    page.fontCache);
+
+                var dataPromises = Promise.all([contentStreamPromise,
+                                                resourcesPromise]);
+                return dataPromises.then(function(data) {
+                  var contentStream = data[0];
+
+                  return partialEvaluator.getOperatorList(contentStream, task,
+                    page.resources, operatorList).then(function () {
+                      return resolve(operatorList);
+                    });
+                });
+              }, function(error) {
+                warn('error getting page', error);
+                resolve([]);
+              });
+            };
+
+            var parseFailure = function parseFailure(e) {
+              warn('error parsing doc', e);
+              resolve([]);
+            };
+
+            manager.ensureDoc('checkHeader', []).then(function() {
+              manager.ensureDoc('parseStartXRef', []).then(function() {
+                manager.ensureDoc('parse', []).then(
+                  parseSuccess, parseFailure);
+              }, parseFailure);
+            }, parseFailure);
+          });
+        }
+      }
 
       return this.getOperatorList(xobj, task,
         (xobj.dict.get('Resources') || resources), operatorList, initialState).
@@ -1458,9 +1528,87 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                 stateManager.transform(matrix);
               }
 
-              return self.getTextContent(xobj, task,
-                xobj.dict.get('Resources') || resources, stateManager,
-                normalizeWhitespace).then(function (formTextContent) {
+              var contentPromise;
+              var ref = xobj.dict.get('Ref');
+
+              if (isDict(ref)) {
+                 var url = ref.get('F');
+                 var fs = ref.get('FS');
+                 var pageNum = (ref.get('Page') || 1) - 1;
+                 if (isString(url) && isName(fs) && fs.name === 'URL') {
+                   var netStream = new NetworkStream(url, xobj.dict);
+                   var manager = self.pdfManager.
+                                createRefXObjectManager(url, netStream);
+                   contentPromise = new Promise(function (xResolve){
+                     var parseSuccess = function parseSuccess() {
+                       if (pageNum >= manager.pdfDocument.numPages) {
+                          pageNum = 0;
+                       }
+
+                       manager.pdfDocument.getPage(pageNum)
+                        .then(function(page) {
+                         var handler = {
+                           on: function nullHandlerOn() {},
+                           send: function nullHandlerSend() {}
+                         };
+                         var contentStreamPromise = manager.ensure(page,
+                                                            'getContentStream',
+                                                            []);
+
+                         var resourcesPromise = page.loadResources([
+                           'ExtGState',
+                           'XObject',
+                           'Font'
+                         ]);
+
+                         var dataPromises = Promise.all([contentStreamPromise,
+                                                         resourcesPromise]);
+                         return dataPromises.then(function(data) {
+                           var contentStream = data[0];
+                           var partialEvaluator = new PartialEvaluator(manager,
+                                                    page.xref,
+                                                    handler,
+                                                    page.pageIndex,
+                                                    'p' + page.pageIndex + '_',
+                                                    page.idCounters,
+                                                    page.fontCache);
+
+                           partialEvaluator.getTextContent(contentStream,
+                                                      task,
+                                                      page.resources,
+                                                      /* stateManager = */ null,
+                                                      normalizeWhitespace)
+                            .then(function(textContent){
+                              xResolve(textContent);
+                            });
+                         });
+                       }, function(error) {
+                         warn('error getting page', error);
+                       });
+
+                     };
+
+                     var parseFailure = function parseFailure(e) {
+                       warn('error parsing doc', e);
+                       resolve([]);
+                     };
+
+                     manager.ensureDoc('checkHeader', []).then(function() {
+                       manager.ensureDoc('parseStartXRef', []).then(function() {
+                        manager.ensureDoc('parse', []).then(
+                           parseSuccess, parseFailure);
+                       }, parseFailure);
+                     }, parseFailure);
+
+                   });
+                 }
+              }
+              if (!contentPromise) {
+                contentPromise = self.getTextContent(xobj, task,
+                  xobj.dict.get('Resources') || resources, stateManager,
+                  normalizeWhitespace);
+              }
+              return contentPromise.then(function (formTextContent) {
                   Util.appendToArray(textContent.items, formTextContent.items);
                   Util.extendObj(textContent.styles, formTextContent.styles);
                   stateManager.restore();

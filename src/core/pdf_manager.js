@@ -103,6 +103,11 @@ var BasePdfManager = (function BasePdfManagerClosure() {
 
     terminate: function BasePdfManager_terminate() {
       return new NotImplementedException();
+    },
+
+    createRefXObjectManager:
+      function BasePdfManager_createRefXObjectManager(docId, stream) {
+        return new LocalPdfManager(docId, stream.getBytes());
     }
   };
 

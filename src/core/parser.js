@@ -53,6 +53,7 @@ var Jbig2Stream = coreStream.Jbig2Stream;
 var JpegStream = coreStream.JpegStream;
 var JpxStream = coreStream.JpxStream;
 var LZWStream = coreStream.LZWStream;
+var NetworkStream = coreStream.NetworkStream;
 var NullStream = coreStream.NullStream;
 var PredictorStream = coreStream.PredictorStream;
 var RunLengthStream = coreStream.RunLengthStream;
@@ -552,6 +553,45 @@ var Parser = (function ParserClosure() {
           stream = this.makeFilter(stream, filter.name, maybeLength, params);
           // after the first stream the length variable is invalid
           maybeLength = null;
+        }
+      } else if (isDict(filter)) {
+        var url = filter.get('F');
+        var fs = filter.get('FS');
+        var fFilter = dict.get('FFilter');
+        var fParams = dict.get('FDecodeParms');
+        if (fParams && this.xref) {
+          fParams = this.xref.fetchIfRef(fParams);
+        }
+        var netStream;
+        if (isName(fFilter) &&
+              isName(fs) &&
+              isString(url) &&
+              fs.name === 'URL') {
+          if (fFilter.name === 'DCTDecode' || fFilter.name === 'DCT') {
+            this.xref.stats.streamTypes[StreamType.DCT] = true;
+            netStream = new NetworkStream(url, stream.dict);
+            return new JpegStream(netStream,
+                                  netStream.end,
+                                  stream.dict,
+                                  this.xref);
+          } else if (fFilter.name === 'CCITTFaxDecode' ||
+              fFilter.name === 'CCF') {
+            this.xref.stats.streamTypes[StreamType.CCF] = true;
+            netStream = new NetworkStream(url, stream.dict);
+            var id1 = netStream.getByte();
+            var id2 = netStream.getByte();
+            if ((id1 === 0x49 && id2 === 0x49) ||
+                (id2 === 0x4D && id2 === 0x4D)) {
+                  netStream.skip(2);
+                  var offset = netStream.getInt32();
+                  if (offset > 8) {
+                    //netStream.skip(offset - 8);
+                  }
+                  return new CCITTFaxStream(netStream,
+                                        netStream.getRemainingLength(),
+                                        fParams);
+            }
+          }
         }
       }
       return stream;

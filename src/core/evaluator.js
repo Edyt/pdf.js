@@ -187,6 +187,16 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
       return false;
     },
 
+    tryGetURLFromRef: function PartialEvaluator_tryGetURLFromRef(ref) {
+      var url = ref.get('F');
+      var refType = ref.get('FS');
+      if (isName(refType) && refType.name === 'URL' && isString(url)) {
+        return url;
+      } else {
+        return undefined;
+      }
+    },
+
     buildFormXObject: function PartialEvaluator_buildFormXObject(resources,
                                                                  xobj, smask,
                                                                  operatorList,
@@ -223,36 +233,24 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
 
       operatorList.addOp(OPS.paintFormXObjectBegin, [matrix, bbox]);
 
-      var stream = xobj;
       var ref = xobj.dict.get('Ref');
       if (isDict(ref)) {
-        var fs = ref.get('FS');
-        var url = ref.get('F');
+        //we are looking for the url to external PDF document
+        //and which page to show from it
         var pageNum = (ref.get('Page') || 1) - 1;
-        if(isName(fs) && fs.name === 'URL' && isString(url)) {
-          stream = new NetworkStream(url, xobj.dict);
+        var url;
+        if((url = this.tryGetURLFromRef(ref))) {
           var manager = this.pdfManager.
-                                createRefXObjectManager(url, stream);
+                                createRefXObjectManager(url, xobj);
           var preprocessor = this;
           return new Promise(function parseExternalDoc(resolve) {
             var parseSuccess = function parseSuccess() {
-              if (pageNum >= manager.pdfDocument.numPages) {
-                pageNum = 0;
-              }
+              pageNum = Math.min(pageNum, manager.pdfDocument.numPages - 1);
               manager.pdfDocument.getPage(pageNum).then(function(page) {
 
                 var contentStreamPromise = manager.ensure(page,
                                           'getContentStream', []);
-                var resourcesPromise = page.loadResources([
-                  'ExtGState',
-                  'ColorSpace',
-                  'Pattern',
-                  'Shading',
-                  'XObject',
-                  'Font'
-                  // ProcSet
-                  // Properties
-                ]);
+                var resourcesPromise = page.loadOperatorListResources();
 
                 var partialEvaluator = new PartialEvaluator(manager, page.xref,
                                             preprocessor.handler,
@@ -265,7 +263,8 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                                                 resourcesPromise]);
                 return dataPromises.then(function(data) {
                   var contentStream = data[0];
-
+                  // get operators from the extarnal document's page
+                  // as this page's operators
                   return partialEvaluator.getOperatorList(contentStream, task,
                     page.resources, operatorList).then(function () {
                       return resolve(operatorList);
@@ -1532,19 +1531,19 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               var ref = xobj.dict.get('Ref');
 
               if (isDict(ref)) {
-                 var url = ref.get('F');
-                 var fs = ref.get('FS');
+                 // we are looking for the url to external PDF document
+                 // and which page to show from it
+                 var url;
                  var pageNum = (ref.get('Page') || 1) - 1;
-                 if (isString(url) && isName(fs) && fs.name === 'URL') {
-                   var netStream = new NetworkStream(url, xobj.dict);
+                 if ((url = self.tryGetURLFromRef(ref))) {
                    var manager = self.pdfManager.
-                                createRefXObjectManager(url, netStream);
+                                createRefXObjectManager(url, xobj);
                    contentPromise = new Promise(function (xResolve){
                      var parseSuccess = function parseSuccess() {
-                       if (pageNum >= manager.pdfDocument.numPages) {
-                          pageNum = 0;
-                       }
+                       pageNum = Math.min(pageNum,
+                         manager.pdfDocument.numPages - 1);
 
+                      // get the requested page from external document
                        manager.pdfDocument.getPage(pageNum)
                         .then(function(page) {
                          var handler = {
@@ -1555,11 +1554,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                                                             'getContentStream',
                                                             []);
 
-                         var resourcesPromise = page.loadResources([
-                           'ExtGState',
-                           'XObject',
-                           'Font'
-                         ]);
+                         var resourcesPromise = page.loadTextContentResources();
 
                          var dataPromises = Promise.all([contentStreamPromise,
                                                          resourcesPromise]);
@@ -1572,7 +1567,8 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                                                     'p' + page.pageIndex + '_',
                                                     page.idCounters,
                                                     page.fontCache);
-
+                           // return text content of the external doc's page
+                           // as this page content
                            partialEvaluator.getTextContent(contentStream,
                                                       task,
                                                       page.resources,

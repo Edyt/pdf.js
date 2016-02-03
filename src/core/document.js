@@ -203,13 +203,8 @@ var Page = (function PageClosure() {
       }.bind(this));
     },
 
-    getOperatorList: function Page_getOperatorList(handler, task, intent) {
-      var self = this;
-
-      var pdfManager = this.pdfManager;
-      var contentStreamPromise = pdfManager.ensure(this, 'getContentStream',
-                                                   []);
-      var resourcesPromise = this.loadResources([
+    loadOperatorListResources: function Page_loadOperatorListResources() {
+      return this.loadResources([
         'ExtGState',
         'ColorSpace',
         'Pattern',
@@ -219,6 +214,23 @@ var Page = (function PageClosure() {
         // ProcSet
         // Properties
       ]);
+    },
+
+    loadTextContentResources: function Page_loadTextContentResoruces() {
+      return this.loadResources([
+        'ExtGState',
+        'XObject',
+        'Font'
+      ]);
+    },
+
+    getOperatorList: function Page_getOperatorList(handler, task, intent) {
+      var self = this;
+
+      var pdfManager = this.pdfManager;
+      var contentStreamPromise = pdfManager.ensure(this, 'getContentStream',
+                                                   []);
+      var resourcesPromise = this.loadOperatorListResources();
 
       var partialEvaluator = new PartialEvaluator(pdfManager, this.xref,
                                                   handler, this.pageIndex,
@@ -275,11 +287,7 @@ var Page = (function PageClosure() {
       var contentStreamPromise = pdfManager.ensure(this, 'getContentStream',
                                                    []);
 
-      var resourcesPromise = this.loadResources([
-        'ExtGState',
-        'XObject',
-        'Font'
-      ]);
+      var resourcesPromise = this.loadTextContentResources();
 
       var dataPromises = Promise.all([contentStreamPromise,
                                       resourcesPromise]);

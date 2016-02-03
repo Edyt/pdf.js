@@ -36,6 +36,7 @@ var MissingDataException = sharedUtil.MissingDataException;
 var createPromiseCapability = sharedUtil.createPromiseCapability;
 var Util = sharedUtil.Util;
 var Stream = coreStream.Stream;
+var NetworkStream = coreStream.NetworkStream;
 var ChunkedStreamManager = coreChunkedStream.ChunkedStreamManager;
 var PDFDocument = coreDocument.PDFDocument;
 
@@ -106,8 +107,9 @@ var BasePdfManager = (function BasePdfManagerClosure() {
     },
 
     createRefXObjectManager:
-      function BasePdfManager_createRefXObjectManager(docId, stream) {
-        return new LocalPdfManager(docId, stream.getBytes());
+      function BasePdfManager_createRefXObjectManager(url, xobj) {
+        var stream = new NetworkStream(url, xobj.dict);
+        return new LocalPdfManager(url, stream.getBytes());
     }
   };
 

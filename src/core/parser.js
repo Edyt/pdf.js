@@ -555,42 +555,42 @@ var Parser = (function ParserClosure() {
           maybeLength = null;
         }
       } else if (isDict(filter)) {
-        var url = filter.get('F');
-        var fs = filter.get('FS');
-        var fFilter = dict.get('FFilter');
-        var fParams = dict.get('FDecodeParms');
-        if (fParams && this.xref) {
-          fParams = this.xref.fetchIfRef(fParams);
-        }
-        var netStream;
-        if (isName(fFilter) &&
-              isName(fs) &&
-              isString(url) &&
-              fs.name === 'URL') {
-          if (fFilter.name === 'DCTDecode' || fFilter.name === 'DCT') {
-            this.xref.stats.streamTypes[StreamType.DCT] = true;
-            netStream = new NetworkStream(url, stream.dict);
-            return new JpegStream(netStream,
-                                  netStream.end,
-                                  stream.dict,
-                                  this.xref);
-          } else if (fFilter.name === 'CCITTFaxDecode' ||
-              fFilter.name === 'CCF') {
-            this.xref.stats.streamTypes[StreamType.CCF] = true;
-            netStream = new NetworkStream(url, stream.dict);
-            var id1 = netStream.getByte();
-            var id2 = netStream.getByte();
-            if ((id1 === 0x49 && id2 === 0x49) ||
-                (id2 === 0x4D && id2 === 0x4D)) {
-                  netStream.skip(2);
-                  var offset = netStream.getInt32();
-                  if (offset > 8) {
-                    //netStream.skip(offset - 8);
-                  }
-                  return new CCITTFaxStream(netStream,
-                                        netStream.getRemainingLength(),
-                                        fParams);
-            }
+        return this.makeRefFilter(stream, filter, dict);
+      }
+      return stream;
+    },
+    makeRefFilter: function Parser_makeRefFilter(stream, ref, dict) {
+      var url = ref.get('F');
+      var refType = ref.get('FS');
+      var filter = dict.get('FFilter');
+      var params = dict.get('FDecodeParms');
+      if (params && this.xref) {
+        params = this.xref.fetchIfRef(params);
+      }
+      var netStream;
+      if (isName(filter) &&
+            isName(refType) &&
+            isString(url) &&
+            refType.name === 'URL') {
+        if (filter.name === 'DCTDecode' || filter.name === 'DCT') {
+          this.xref.stats.streamTypes[StreamType.DCT] = true;
+          netStream = new NetworkStream(url, stream.dict);
+          return new JpegStream(netStream,
+                                netStream.end,
+                                stream.dict,
+                                this.xref);
+        } else if (filter.name === 'CCITTFaxDecode' ||
+            filter.name === 'CCF') {
+          this.xref.stats.streamTypes[StreamType.CCF] = true;
+          netStream = new NetworkStream(url, stream.dict);
+          var id1 = netStream.getByte();
+          var id2 = netStream.getByte();
+          if ((id1 === 0x49 && id2 === 0x49) || // Intel byte order
+              (id2 === 0x4D && id2 === 0x4D)) { // Motorola byte order
+                netStream.skip(6); // skip TIFF header
+                return new CCITTFaxStream(netStream,
+                                      netStream.getRemainingLength(),
+                                      params);
           }
         }
       }

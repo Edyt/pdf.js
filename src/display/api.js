@@ -733,6 +733,9 @@ var PDFDocumentProxy = (function PDFDocumentProxyClosure() {
     getOutline: function PDFDocumentProxy_getOutline() {
       return this.transport.getOutline();
     },
+    getStructTree: function PDFDocumentProxy_getStructTree() {
+      return this.transport.getStructTree();
+    },
     /**
      * @return {Promise} A promise that is resolved with an {Object} that has
      * info and metadata properties.  Info is an {Object} filled with anything
@@ -1845,6 +1848,10 @@ var WorkerTransport = (function WorkerTransportClosure() {
 
     getOutline: function WorkerTransport_getOutline() {
       return this.messageHandler.sendWithPromise('GetOutline', null);
+    },
+
+    getStructTree: function WorkerTransport_getStructTree() {
+      return this.messageHandler.sendWithPromise('GetStructTree', null);
     },
 
     getMetadata: function WorkerTransport_getMetadata() {

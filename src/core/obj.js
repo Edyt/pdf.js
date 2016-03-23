@@ -116,6 +116,103 @@ var Catalog = (function CatalogClosure() {
       // shadow the prototype getter
       return shadow(this, 'toplevelPagesDict', pagesObj);
     },
+    get documentStructTree() {
+      var obj = null;
+      try {
+        obj = this.readStructTreeRoot();
+      } catch (ex) {
+        if (ex instanceof MissingDataException) {
+          throw ex;
+        }
+        warn('Unable to read StructTreeRoot');
+      }
+      return shadow(this, 'documentStructTree', obj);
+    },
+    readStructTreeRoot: function Catalog_readStructTreeRoot() {
+      var obj = this.catDict.get('StructTreeRoot');
+      if (!isDict(obj)) {
+        return null;
+      }
+      var children = obj.getRaw('K');
+      if (!children) {
+        return null;
+      }
+      if (!isArray(children)) {
+        children = [children];
+      }
+      return {
+        children: this.getChildrenStructElements(children)
+      };
+    },
+    getChildrenStructElements: function Catalog_getChildrenStructElements(children) {
+      if (!children) {
+        return null;
+      }
+      var root = {children: []};
+      // To avoid recursion, keep track of the already processed items.
+      var processed = new RefSet();
+      var queue = children.map(function(child){
+        processed.put(child);
+        return {obj: child, parent: root};
+      });
+      queue.reverse();
+      var element, item;
+      while(queue.length){
+        item = queue.pop();
+        element = this.getStructElement(item.obj, item.parent);
+        if (!element) {
+          continue;
+        }
+        if(element.children){
+          var grandchildren = element.children, grandchild;
+          //has more nested structure elements
+          while (grandchildren.length) {
+            grandchild = grandchildren.pop();
+            if (!processed.has(grandchild)) {
+              processed.push(grandchild);
+              queue.push({obj:grandchild, parent: element});
+            }
+          }
+        }
+        item.parent.push(element);
+      }
+      return root.children.length ? root.children : null;
+    },
+    getStructElement: function Catalog_getStructElement(obj, parent) {
+      obj = this.xref.fetchIfRef(obj);
+      if (isInt(obj)) {
+        // marked content sequence number
+        assert(isRef(parent.page), 'invalid page');
+        obj = {type: 'MCR', id: obj, page: parent.page};
+      } else {
+        var type = obj.has('Type') && obj.get('Type');
+        if (!type || type.name === 'StructElem') {
+          //if no explicit type, by default it's struct element
+          assert(isName(obj.get('Name')), 'Missing Name field in StructElem');
+          obj = {
+            type: 'StructElem',
+            name: obj.get('Name'),
+            page: obj.getRaw('Pg'),
+            id: obj.get('ID')
+            //TODO: support attributes(A) and classes (C)
+          };
+          if (obj.has('K')) {
+            obj.children = [].concat(obj.get('K'));
+          }
+        } else if (type.name === 'MCR') {
+          var page = obj.getRaw('Pg');
+          if (!page) {
+            assert(isRef(parent.page), 'invalid page');
+            page = parent.page;
+          }
+          obj = {type: 'MCR', id: obj.get('MCID'), page: page};
+        } else {
+          // other pdf object content
+          console.log('TODO support pdf object content in struct element tree');
+        }
+      }
+      return obj;
+    },
     get documentOutline() {
       var obj = null;
       try {
@@ -1602,4 +1699,7 @@ exports.Catalog = Catalog;
 exports.ObjectLoader = ObjectLoader;
 exports.XRef = XRef;
 exports.FileSpec = FileSpec;
+exports.NameOrNumberTree = NameOrNumberTree;
+exports.NameTree = NameTree;
+exports.NumberTree= NumberTree;
 }));

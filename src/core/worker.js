@@ -794,6 +794,12 @@ var WorkerMessageHandler = PDFJS.WorkerMessageHandler = {
       }
     );
 
+    handler.on('GetStructTree',
+      function wphSetupGetOutline(data) {
+        return pdfManager.ensureCatalog('documentStructTree');
+      }
+    );
+
     handler.on('GetMetadata',
       function wphSetupGetMetadata(data) {
         return Promise.all([pdfManager.ensureDoc('documentInfo'),

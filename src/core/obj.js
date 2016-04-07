@@ -140,8 +140,16 @@ var Catalog = (function CatalogClosure() {
       if (!isArray(children)) {
         children = [children];
       }
+      var IDTree = null;
+      if (obj.has('IDTree')) {
+        IDTree = (new NameTree(obj.getRaw('IDTree', this.xref))).getAll();
+      }
+      var ParentTree = new NumberTree(obj.getRaw('ParentTree'), this.xref);
+
       return {
-        children: this.getChildrenStructElements(children)
+        children: this.getChildrenStructElements(children),
+        IDTree: IDTree,
+        ParentTree: ParentTree.getAll()
       };
     },
     getChildrenStructElements: function Catalog_getChildrenStructElements(children) {
@@ -169,35 +177,36 @@ var Catalog = (function CatalogClosure() {
           while (grandchildren.length) {
             grandchild = grandchildren.pop();
             if (!processed.has(grandchild)) {
-              processed.push(grandchild);
+              processed.put(grandchild);
               queue.push({obj:grandchild, parent: element});
             }
           }
         }
-        item.parent.push(element);
+        item.parent.children.push(element);
       }
       return root.children.length ? root.children : null;
     },
     getStructElement: function Catalog_getStructElement(obj, parent) {
       obj = this.xref.fetchIfRef(obj);
+      var elemobj;
       if (isInt(obj)) {
         // marked content sequence number
         assert(isRef(parent.page), 'invalid page');
-        obj = {type: 'MCR', id: obj, page: parent.page};
+        elemobj = {type: 'MCR', id: obj, page: parent.page};
       } else {
         var type = obj.has('Type') && obj.get('Type');
         if (!type || type.name === 'StructElem') {
           //if no explicit type, by default it's struct element
-          assert(isName(obj.get('Name')), 'Missing Name field in StructElem');
-          obj = {
+          assert(isName(obj.get('S')), 'Missing S field in StructElem');
+          elemobj = {
             type: 'StructElem',
-            name: obj.get('Name'),
+            name: obj.get('S').name,
             page: obj.getRaw('Pg'),
             id: obj.get('ID')
-            //TODO: support attributes(A) and classes (C)
+            //TODO: support attributes(A) and classes(C)
           };
           if (obj.has('K')) {
-            obj.children = [].concat(obj.get('K'));
+            elemobj.children = [].concat(obj.get('K'));
           }
         } else if (type.name === 'MCR') {
           var page = obj.getRaw('Pg');
@@ -205,13 +214,13 @@ var Catalog = (function CatalogClosure() {
             assert(isRef(parent.page), 'invalid page');
             page = parent.page;
           }
-          obj = {type: 'MCR', id: obj.get('MCID'), page: page};
+          elemobj = {type: 'MCR', id: obj.get('MCID'), page: page};
         } else {
           // other pdf object content
           console.log('TODO support pdf object content in struct element tree');
         }
       }
-      return obj;
+      return elemobj;
     },
     get documentOutline() {
       var obj = null;

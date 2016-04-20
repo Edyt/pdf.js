@@ -146,10 +146,22 @@ var Catalog = (function CatalogClosure() {
       }
       var ParentTree = new NumberTree(obj.getRaw('ParentTree'), this.xref);
 
+      var roleMap = obj.get('RoleMap');
+      if (roleMap) {
+        var map = {};
+        roleMap.forEach(function(key, value) {
+          if (key !== value.name){
+            map[key] = value.name;
+          }
+        });
+        roleMap = map;
+      }
+
       return {
         children: this.getChildrenStructElements(children),
         IDTree: IDTree,
-        ParentTree: ParentTree.getAll()
+        ParentTree: ParentTree.getAll(),
+        RoleMap: roleMap
       };
     },
     getChildrenStructElements: function Catalog_getChildrenStructElements(children) {

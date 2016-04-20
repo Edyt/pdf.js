@@ -24,7 +24,7 @@
   line-height: 1.0;
 }
 
-.textLayer > div {
+.textLayer div.textLayerDiv {
   color: transparent;
   position: absolute;
   white-space: pre;

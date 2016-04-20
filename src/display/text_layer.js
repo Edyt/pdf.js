@@ -57,10 +57,76 @@ var renderTextLayer = (function renderTextLayerClosure() {
     return !NonWhitespaceRegexp.test(str);
   }
 
-  function appendText(textDivs, viewport, geom, styles) {
-    var style = styles[geom.fontName];
+  var StandardBlockElements = {
+    P:1, H:1, H1:1, H2:1, H3:1, H4:1, H5:1, H6:1, L:1,
+    LBL:1, LI:1, LBODY:1, TABLE:1
+  };
+
+  var PDFElementsToHTMLMap = {
+    Link: 'a'
+  };
+
+  function getHTMLType(pdftype, roleMap) {
+    var type = roleMap[pdftype] || pdftype;
+    return PDFElementsToHTMLMap[type] || type;
+  }
+
+  function isBlockElement(element, roleMap) {
+    var type = element.S;
+    if (type in StandardBlockElements){
+      return true;
+    }
+    if (type in roleMap &&
+        roleMap[type].toUpperCase() in StandardBlockElements) {
+      return true;
+    }
+  }
+
+  function createParents(markedContent, textDivs, structs, roleMap) {
+      var firstparent = structs[markedContent.parentid];
+      var parent = firstparent;
+      var child;
+      while (parent) {
+        if (parent._element) {
+          if (child && !child._element.parentNode) {
+            parent._element.appendChild(child._element);
+          }
+          break;
+        } else {
+          var type = getHTMLType(parent.S, roleMap);
+          parent._element = document.createElement(type);
+          if (child) {
+            parent._element.appendChild(child._element);
+          } else {
+            parent._element.setAttribute('MCID', markedContent.MCID);
+          }
+          if (isBlockElement(parent, roleMap)) {
+            textDivs.push(parent._element);
+            break;
+          }
+          child = parent;
+          parent = structs[parent.parentid];
+        }
+      }
+      if (!parent && child && !child._element.parentNode) {
+        textDivs.push(child._element);
+      }
+      return firstparent;
+  }
+
+  function appendText(textDivs, viewport, geom, textContents) {
+    var style = textContents.styles[geom.fontName];
+    var structs = textContents.structs;
+    var roleMap = textContents.roleMap;
     var textDiv = document.createElement('div');
-    textDivs.push(textDiv);
+    textDiv.className = 'textLayerDiv';
+    if (geom.markedContent) {
+      var parent = createParents(geom.markedContent, textDivs, structs,
+                                 roleMap);
+      parent._element.appendChild(textDiv);
+    } else {
+      textDivs.push(textDiv);
+    }
     if (isAllWhitespace(geom.str)) {
       textDiv.dataset.isWhitespace = true;
       return;
@@ -208,16 +274,21 @@ var renderTextLayer = (function renderTextLayerClosure() {
         clearTimeout(this._renderTimer);
         this._renderTimer = null;
       }
+      // clear out the cached elements to make rerendering
+      // in another task work properly
+      var structs = this._textContent.structs || {};
+      for (var id in structs) {
+        delete structs[id]._element;
+      }
       this._capability.reject('canceled');
     },
 
     _render: function TextLayer_render(timeout) {
       var textItems = this._textContent.items;
-      var styles = this._textContent.styles;
       var textDivs = this._textDivs;
       var viewport = this._viewport;
       for (var i = 0, len = textItems.length; i < len; i++) {
-        appendText(textDivs, viewport, textItems[i], styles);
+        appendText(textDivs, viewport, textItems[i], this._textContent);
       }
 
       if (!timeout) { // Render right away

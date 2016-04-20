@@ -994,9 +994,6 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               continue;
             case OPS.markPoint:
             case OPS.markPointProps:
-            case OPS.beginMarkedContent:
-            case OPS.beginMarkedContentProps:
-            case OPS.endMarkedContent:
             case OPS.beginCompat:
             case OPS.endCompat:
               // Ignore operators where the corresponding handlers are known to
@@ -1006,6 +1003,14 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               // e.g. as done in https://github.com/mozilla/pdf.js/pull/6266,
               // but doing so is meaningless without knowing the semantics.
               continue;
+            case OPS.beginMarkedContent:
+            case OPS.beginMarkedContentProps:
+            case OPS.endMarkedContent:
+              if (args !== null && args[1] instanceof Dict) {
+                //extract serializable data to pass through postMessage
+                args[1] = args[1].map;
+              }
+              break;
             default:
               // Note: Ignore the operator if it has `Dict` arguments, since
               // those are non-serializable, otherwise postMessage will throw
@@ -1043,14 +1048,43 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
         function PartialEvaluator_getTextContent(stream, task, resources,
                                                  stateManager,
                                                  normalizeWhitespace) {
+      var self = this;
+      var pageDict =
+        this.pdfManager.pdfDocument.catalog.getPageDict(this.pageIndex);
+      return pageDict.then(function(data){
+        var structParents = data[0].get('StructParents');
+        var structTree = self.pdfManager.pdfDocument.catalog.documentStructTree;
 
+        if (!isNaN(structParents) && structTree) {
+          structParents = structTree.ParentTree[structParents];
+          var xref = self.xref;
+          structParents = structParents.map(function(p){return xref.fetch(p);});
+        } else {
+          structParents = null;
+        }
+        return self.getTextInternal(stream, task, resources,
+                                    stateManager,
+                                    normalizeWhitespace, structParents);
+      });
+    },
+
+    getTextInternal:
+        function PartialEvaluator_getTextInternal(stream, task, resources,
+                                                 stateManager,
+                                                 normalizeWhitespace,
+                                                 structParents) {
+
+console.log('structParents', structParents);
       stateManager = (stateManager || new StateManager(new TextState()));
 
       var WhitespaceRegexp = /\s/g;
 
+      var catalog = this.pdfManager.pdfDocument.catalog;
       var textContent = {
         items: [],
-        styles: Object.create(null)
+        styles: Object.create(null),
+        structs: Object.create(null),
+        roleMap: catalog.documentStructTree.RoleMap
       };
       var textContentItem = {
         initialized: false,
@@ -1084,7 +1118,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
 
       var preprocessor = new EvaluatorPreprocessor(stream, xref, stateManager);
 
-      var textState;
+      var textState, currentMarkContent;
 
       function ensureTextContentItem() {
         if (textContentItem.initialized) {
@@ -1158,6 +1192,9 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
 
 
         textContentItem.initialized = true;
+        if (currentMarkContent) {
+          textContentItem.markedContent = currentMarkContent;
+        }
         return textContentItem;
       }
 
@@ -1182,7 +1219,8 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
           width: textChunk.width,
           height: textChunk.height,
           transform: textChunk.transform,
-          fontName: textChunk.fontName
+          fontName: textChunk.fontName,
+          markedContent: textChunk.markedContent
         };
       }
 
@@ -1533,6 +1571,41 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                   next(resolve, reject);
                 }, reject);
               }
+              break;
+            // marked content
+            case OPS.beginMarkedContent:
+              if (args[0] && args[0].name !== 'Artifact') {
+                console.warn('evaluator.getTextContent: '+
+                             'encountered non artifact beginMarkedContent',
+                             args[0].name);
+              }
+              break;
+            case OPS.beginMarkedContentProps:
+              var mcid = args[1].map.MCID;
+              var parent = structParents[mcid];
+              currentMarkContent = {
+                type: args[0].name, MCID: mcid, parentid: parent.objId
+              };
+              while (parent && !(parent.objId in textContent.structs)) {// &&
+//                     isBlockElement(parent)) {
+                var grandparent = parent.get('P');
+                if (!grandparent) {
+                  //reached StructTreeRoot
+                  break;
+                }
+                textContent.structs[parent.objId] = {
+                  S: parent.get('S').name,
+                  id: parent.objId,
+                  parentid: grandparent.objId
+                  //TODO: add Attributes(A) and children(K)
+                  //is K needed?
+                };
+                console.log('adding parent', textContent.structs[parent.objId]);
+                parent = grandparent;
+              }
+              break;
+            case OPS.endMarkedContent:
+              currentMarkContent = null;
               break;
           } // switch
         } // while

@@ -1568,20 +1568,22 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               break;
             // marked content
             case OPS.beginMarkedContent:
-              if (args[0] && args[0].name !== 'Artifact') {
+              if (structParents && args[0] && args[0].name !== 'Artifact') {
                 console.warn('evaluator.getTextContent: '+
                              'encountered non artifact beginMarkedContent',
                              args[0].name);
               }
               break;
             case OPS.beginMarkedContentProps:
+              if (!structParents) {
+                break;
+              }
               var mcid = args[1].map.MCID;
               var parent = structParents[mcid];
               currentMarkContent = {
                 type: args[0].name, MCID: mcid, parentid: parent.objId
               };
-              while (parent && !(parent.objId in textContent.structs)) {// &&
-//                     isBlockElement(parent)) {
+              while (parent && !(parent.objId in textContent.structs)) {
                 var grandparent = parent.get('P');
                 if (!grandparent) {
                   //reached StructTreeRoot
@@ -1594,7 +1596,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                   //TODO: add Attributes(A) and children(K)
                   //is K needed?
                 };
-                console.log('adding parent', textContent.structs[parent.objId]);
+
                 parent = grandparent;
               }
               break;

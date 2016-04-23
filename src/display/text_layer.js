@@ -82,7 +82,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
     }
   }
 
-  function createParents(markedContent, textDivs, structs, roleMap) {
+  function createParents(markedContent, textLayerFrag, structs, roleMap) {
       var firstparent = structs[markedContent.parentid];
       var parent = firstparent;
       var child;
@@ -101,7 +101,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
             parent._element.setAttribute('MCID', markedContent.MCID);
           }
           if (isBlockElement(parent, roleMap)) {
-            textDivs.push(parent._element);
+            textLayerFrag.appendChild(parent._element);
             break;
           }
           child = parent;
@@ -109,24 +109,15 @@ var renderTextLayer = (function renderTextLayerClosure() {
         }
       }
       if (!parent && child && !child._element.parentNode) {
-        textDivs.push(child._element);
+        textLayerFrag.appendChild(parent._element);
       }
       return firstparent;
   }
 
-  function appendText(textDivs, viewport, geom, textContents) {
-    var style = textContents.styles[geom.fontName];
-    var structs = textContents.structs;
-    var roleMap = textContents.roleMap;
+  function appendText(textDivs, viewport, geom, styles) {
+    var style = styles[geom.fontName];
     var textDiv = document.createElement('div');
-    textDiv.className = 'textLayerDiv';
-    if (geom.markedContent) {
-      var parent = createParents(geom.markedContent, textDivs, structs,
-                                 roleMap);
-      parent._element.appendChild(textDiv);
-    } else {
-      textDivs.push(textDiv);
-    }
+    textDivs.push(textDiv);
     if (isAllWhitespace(geom.str)) {
       textDiv.dataset.isWhitespace = true;
       return;
@@ -187,6 +178,9 @@ var renderTextLayer = (function renderTextLayerClosure() {
     }
     var textLayerFrag = task._container;
     var textDivs = task._textDivs;
+    var textItems = task._textContent.items;
+    var structs = task._textContent.structs;
+    var roleMap = task._textContent.roleMap;
     var capability = task._capability;
     var textDivsLength = textDivs.length;
 
@@ -223,7 +217,15 @@ var renderTextLayer = (function renderTextLayerClosure() {
 
       var width = ctx.measureText(textDiv.textContent).width;
       if (width > 0) {
-        textLayerFrag.appendChild(textDiv);
+        textDiv.setAttribute('textLayerDiv', true);
+        var textItem = textItems[i];
+        if (textItem.markedContent) {
+          var parent = createParents(textItem.markedContent, textLayerFrag,
+                                     structs, roleMap);
+          parent._element.appendChild(textDiv);
+        } else {
+          textLayerFrag.appendChild(textDiv);
+        }
         var transform;
         if (textDiv.dataset.canvasWidth !== undefined) {
           // Dataset values come of type string.
@@ -288,7 +290,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
       var textDivs = this._textDivs;
       var viewport = this._viewport;
       for (var i = 0, len = textItems.length; i < len; i++) {
-        appendText(textDivs, viewport, textItems[i], this._textContent);
+        appendText(textDivs, viewport, textItems[i], this._textContent.styles);
       }
 
       if (!timeout) { // Render right away

@@ -994,6 +994,9 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               continue;
             case OPS.markPoint:
             case OPS.markPointProps:
+            case OPS.beginMarkedContent:
+            case OPS.beginMarkedContentProps:
+            case OPS.endMarkedContent:
             case OPS.beginCompat:
             case OPS.endCompat:
               // Ignore operators where the corresponding handlers are known to
@@ -1003,14 +1006,6 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               // e.g. as done in https://github.com/mozilla/pdf.js/pull/6266,
               // but doing so is meaningless without knowing the semantics.
               continue;
-            case OPS.beginMarkedContent:
-            case OPS.beginMarkedContentProps:
-            case OPS.endMarkedContent:
-              if (args !== null && args[1] instanceof Dict) {
-                //extract serializable data to pass through postMessage
-                args[1] = args[1].map;
-              }
-              break;
             default:
               // Note: Ignore the operator if it has `Dict` arguments, since
               // those are non-serializable, otherwise postMessage will throw
@@ -1074,7 +1069,6 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                                                  normalizeWhitespace,
                                                  structParents) {
 
-console.log('structParents', structParents);
       stateManager = (stateManager || new StateManager(new TextState()));
 
       var WhitespaceRegexp = /\s/g;

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+	<head>
+    		<meta charset="utf-8">
+		<script src="html_selection.js"></script>
+		<script>
+			document.addEventListener("mouseup", function(e) {
+				var range = getMCRange();
+				if (range) {
+					opener.PDFViewerApplication.pdfViewer.setSelection(range);
+				}
+			}, false);
+			function getMarkedContentNode(pageindex, markedid) {
+				var node = document.querySelector('span[mcid="' +
+				pageindex + '/' + markedid + '"]');
+				return node && node.firstChild;
+			}
+			function setSelection(range) {
+				var startcontainer = getMarkedContentNode(range.start.page,
+								     range.start.mcid);
+				var endcontainer= getMarkedContentNode(range.end.page,
+								     range.end.mcid);
+				var sel = window.getSelection();
+				sel.removeAllRanges();
+				var r = document.createRange();
+				r.setStart(startcontainer, range.start.offset);
+				r.setEnd(endcontainer, range.end.offset);
+				sel.addRange(r);
+			}
+			//TODO: support keypress selection change, or use
+			//selectionchange event when it's enabled by default in FF
+			//document.addEventListener("keyup", function(e) {
+			//	  console.log(e, getSelection().getRangeAt(0)); 
+			//}, false);
+		</script>
+		<style>
+			::-moz-selection {
+				background: yellow;
+			}
+			body:-moz-window-inactive::-moz-selection {
+				background: red;
+			}
+		</style>
+	</head>
+	<body></body>
+</html>

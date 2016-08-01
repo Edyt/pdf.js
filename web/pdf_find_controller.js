@@ -153,6 +153,8 @@ var PDFFindController = (function PDFFindControllerClosure() {
       this.startedTextExtraction = true;
 
       this.pageContents = [];
+      this.pageMarkedSequences = [];
+      this.pageStructs = [];
       var extractTextPromisesResolves = [];
       var numPages = this.pdfViewer.pagesCount;
       for (var i = 0; i < numPages; i++) {
@@ -175,9 +177,59 @@ var PDFFindController = (function PDFFindControllerClosure() {
             // Store the pageContent as a string.
             self.pageContents.push(str.join(''));
 
+            var markedSeqs = self.pageMarkedSequences[pageIndex] = {};
+            self.pageStructs[pageIndex] = textContent.structs;
+            var item, mcid;
+            for (var i = 0, len = textItems.length; i < len; i++) {
+              item = textItems[i];
+              if (item && item.markedContent) {
+                mcid = item.markedContent.MCID;
+                if (!markedSeqs[mcid]) {
+                  markedSeqs[mcid] = item.str;
+                } else {
+                  markedSeqs[mcid] += item.str;
+                }
+              }
+            }
+
             extractTextPromisesResolves[pageIndex](pageIndex);
             if ((pageIndex + 1) < self.pdfViewer.pagesCount) {
               extractPageText(pageIndex + 1);
+            } else {
+              // all pages are ready, generate HTML output
+              self.pdfViewer.pdfDocument.getStructTree().then(function(structTree){
+                var roleMap = structTree.RoleMap;
+                var children = structTree.children;
+                var top = document.createElement('div');
+                var queue = children.slice(0);
+                var elements = {}, parent, current, seqs, elementname, elem;
+                while(queue.length){
+                  current = queue.pop();
+                  parent = elements[current.parentpdfid] || top;
+                  if (current.type === 'StructElem' ){
+                    elementname = roleMap[current.name] || current.name;
+                    if(elementname === 'Link'){
+                      elementname = 'a';
+                    }
+                    elements[current.pdfid] = elem =
+                      parent.insertBefore(document.createElement(elementname),
+                                        parent.firstChild);
+                    elem.setAttribute('pdfid', current.pdfid);
+
+                    if (current.children) {
+                      queue = queue.concat(current.children);
+                    }
+                  } else if (current.type === 'MCR') {
+                    //marked content sequence
+                    seqs = self.pageMarkedSequences[current.page];
+                    if (seqs && seqs[current.MCID]) {
+                      parent.insertBefore(document.createTextNode(seqs[current.MCID]),
+                                          parent.firstChild);
+                    }
+                  }
+                }
+                //console.log(top.innerHTML);
+              });
             }
           }
         );

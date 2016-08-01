@@ -75,6 +75,8 @@ var Catalog = (function CatalogClosure() {
     // TODO refactor to move getPage() to the PDFDocument.
     this.pageFactory = pageFactory;
     this.pagePromises = [];
+
+    this._pageObjMaps = {};
   }
 
   Catalog.prototype = {
@@ -157,14 +159,34 @@ var Catalog = (function CatalogClosure() {
         roleMap = map;
       }
 
+      //try to convert non serializable objects to Refs
+      var cleanObj = function(objs){
+        if (objs) {
+          var key, value, idparts;
+          for(var key in objs){
+            value = objs[key];
+            if (value.__nonSerializable__) {
+              if (value.objId) {
+                idparts = value.objId.split('R');
+                objs[key] = new Ref(parseInt(idparts[0]), idparts[1] || 0);
+              } else {
+                objs[key] = null;
+                warn('non serializable object with no objId encountered with key=' + key);
+              }
+            }
+          }
+        }
+        return objs;
+      };
       return {
         children: this.getChildrenStructElements(children),
-        IDTree: IDTree,
-        ParentTree: ParentTree.getAll(),
+        IDTree: cleanObj(IDTree),
+        ParentTree: cleanObj(ParentTree.getAll()),
         RoleMap: roleMap
       };
     },
-    getChildrenStructElements: function Catalog_getChildrenStructElements(children) {
+    getChildrenStructElements:
+        function Catalog_getChildrenStructElements(children) {
       if (!children) {
         return null;
       }
@@ -176,35 +198,48 @@ var Catalog = (function CatalogClosure() {
         return {obj: child, parent: root};
       });
       queue.reverse();
-      var element, item;
+      var element, item, grandchildren, grandchild;
       while(queue.length){
         item = queue.pop();
+        var tobj = this.xref.fetchIfRef(item.obj);
         element = this.getStructElement(item.obj, item.parent);
         if (!element) {
           continue;
         }
         if(element.children){
-          var grandchildren = element.children, grandchild;
+          grandchildren = element.children;
           //has more nested structure elements
           while (grandchildren.length) {
             grandchild = grandchildren.pop();
-            if (!processed.has(grandchild)) {
-              processed.put(grandchild);
-              queue.push({obj:grandchild, parent: element});
+            if (isRef(grandchild)) {
+              if (processed.has(grandchild)) {
+                continue;
+              } else {
+                processed.put(grandchild);
+              }
             }
+            queue.push({obj:grandchild, parent: element});
           }
         }
         item.parent.children.push(element);
       }
       return root.children.length ? root.children : null;
     },
+    _getPageIndex: function(pdfid){
+      if (pdfid in this._pageObjMaps) {
+        return this._pageObjMaps[pdfid];
+      }
+    },
     getStructElement: function Catalog_getStructElement(obj, parent) {
       obj = this.xref.fetchIfRef(obj);
       var elemobj;
       if (isInt(obj)) {
         // marked content sequence number
-        assert(isRef(parent.page), 'invalid page');
-        elemobj = {type: 'MCR', id: obj, page: parent.page};
+        assert(isRef(parent.page) || isInt(parent.page), 'invalid page');
+        elemobj = {type: 'MCR', MCID: obj, page:
+          isRef(parent.page) ?
+          this._getPageIndex(parent.page.toString()) : parent.page,
+          parentpdfid: parent.pdfid};
       } else {
         var type = obj.has('Type') && obj.get('Type');
         if (!type || type.name === 'StructElem') {
@@ -213,8 +248,11 @@ var Catalog = (function CatalogClosure() {
           elemobj = {
             type: 'StructElem',
             name: obj.get('S').name,
-            page: obj.getRaw('Pg'),
-            id: obj.get('ID')
+            page: obj.getRaw('Pg') &&
+              this._getPageIndex(obj.getRaw('Pg').toString()),
+            id: obj.get('ID'),
+            pdfid: obj.objId,
+            parentpdfid: obj.getRaw('P').toString()
             //TODO: support attributes(A) and classes(C)
           };
           if (obj.has('K')) {
@@ -223,13 +261,37 @@ var Catalog = (function CatalogClosure() {
         } else if (type.name === 'MCR') {
           var page = obj.getRaw('Pg');
           if (!page) {
-            assert(isRef(parent.page), 'invalid page');
+            assert(isRef(parent.page) || isInt(parent.page), 'invalid page');
             page = parent.page;
           }
-          elemobj = {type: 'MCR', id: obj.get('MCID'), page: page};
+          page = isRef(parent.page) ? this._getPageIndex[page.toString()] : page;
+          elemobj = {type: 'MCR', MCID: obj.get('MCID'), page: page, 
+            parentpdfid: parent.pdfid};
+        } else if (type.name === 'OBJR') {
+          obj = obj.get('Obj');
+          type = obj.get('Type');
+          if (type && type.name === 'Annot') {
+            type = obj.get('Subtype');
+            if (type && type.name === 'Link') {
+              if (parent.name === 'Link') {
+                var attrs = obj.get('A');
+                if (attrs) {
+                  if (attrs.get('URI')) {
+                    parent.uri = attrs.get('URI');
+                  } else {
+                    console.log('No URI attributes on Link Annot object', attrs);
+                  }
+                }
+              }
+            } else {
+              console.log('TODO support other Annot', object);
+            }
+          } else {
+            console.log('TODO support other OBJR object', obj);
+          }
         } else {
           // other pdf object content
-          console.log('TODO support pdf object content in struct element tree');
+          console.log('TODO support pdf object content in struct element tree', obj);
         }
       }
       return elemobj;
@@ -571,7 +633,30 @@ var Catalog = (function CatalogClosure() {
     },
 
     getPageDict: function Catalog_getPageDict(pageIndex) {
-      var capability = createPromiseCapability();
+      if (!this._pageDictPromises) {
+        this._pageDictPromises = [];
+        var numPages = this.numPages, i = 0, pageObjMaps = this._pageObjMaps;
+        var getHandler = function(_pageIndex){
+          return function(a){
+            var dict = a[0];
+            pageObjMaps[dict.objId] = _pageIndex;
+          };
+        };
+        for (; i<numPages; i++){
+          this._pageDictPromises[i] = createPromiseCapability();
+          this._pageDictPromises[i].promise.then(getHandler(i));
+          this._getPageDict(i);
+        }
+        this._pageDictAll = Promise.all(this._pageDictPromises);
+      }
+      var dictPromise = this._pageDictPromises[pageIndex].promise;
+      return this._pageDictAll.then(function(){
+        return dictPromise;
+      });
+    },
+
+    _getPageDict: function Catalog_getPageDict_(pageIndex) {
+      var capability = this._pageDictPromises[pageIndex];//createPromiseCapability();
       var nodesToVisit = [this.catDict.getRaw('Pages')];
       var currentPageIndex = 0;
       var xref = this.xref;
@@ -1196,6 +1281,15 @@ var XRef = (function XRefClosure() {
       return this.fetch(obj);
     },
 
+    _addToCache: function(ref, xrefEntry){
+      this.cache[ref.num] = xrefEntry;
+      if (isDict(xrefEntry)){
+        xrefEntry.objId = ref.toString();
+      } else if (isStream(xrefEntry)) {
+        xrefEntry.dict.objId = ref.toString();
+      }
+    },
+
     fetch: function XRef_fetch(ref, suppressEncryption) {
       assert(isRef(ref), 'ref object is not a reference');
       var num = ref.num;
@@ -1216,11 +1310,7 @@ var XRef = (function XRefClosure() {
       } else {
         xrefEntry = this.fetchCompressed(xrefEntry, suppressEncryption);
       }
-      if (isDict(xrefEntry)){
-        xrefEntry.objId = ref.toString();
-      } else if (isStream(xrefEntry)) {
-        xrefEntry.dict.objId = ref.toString();
-      }
+
       return xrefEntry;
     },
 
@@ -1258,7 +1348,7 @@ var XRef = (function XRefClosure() {
         xrefEntry = parser.getObj();
       }
       if (!isStream(xrefEntry)) {
-        this.cache[num] = xrefEntry;
+        this._addToCache(ref, xrefEntry);
       }
       return xrefEntry;
     },
@@ -1296,7 +1386,7 @@ var XRef = (function XRefClosure() {
         num = nums[i];
         var entry = this.entries[num];
         if (entry && entry.offset === tableOffset && entry.gen === i) {
-          this.cache[num] = entries[i];
+          this._addToCache(new Ref(num, i), entries[i]);
         }
       }
       xrefEntry = entries[xrefEntry.gen];

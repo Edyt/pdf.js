@@ -1078,7 +1078,8 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
         items: [],
         styles: Object.create(null),
         structs: Object.create(null),
-        roleMap: catalog.documentStructTree.RoleMap
+        roleMap: catalog.documentStructTree &&
+          catalog.documentStructTree.RoleMap
       };
       var textContentItem = {
         initialized: false,

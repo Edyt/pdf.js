@@ -98,7 +98,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
           if (child) {
             parent._element.appendChild(child._element);
           } else {
-            parent._element.setAttribute('MCID', markedContent.MCID);
+            //parent._element.setAttribute('MCID', markedContent.MCID);
           }
           if (isBlockElement(parent, roleMap)) {
             textLayerFrag.appendChild(parent._element);
@@ -109,7 +109,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
         }
       }
       if (!parent && child && !child._element.parentNode) {
-        textLayerFrag.appendChild(parent._element);
+        textLayerFrag.appendChild(child._element);
       }
       return firstparent;
   }
@@ -199,6 +199,9 @@ var renderTextLayer = (function renderTextLayerClosure() {
 
     var lastFontSize;
     var lastFontFamily;
+    var pageIdx = task._pageIdx;
+    var MCIDOffsets = {};
+    var mcid;
     for (var i = 0; i < textDivsLength; i++) {
       var textDiv = textDivs[i];
       if (textDiv.dataset.isWhitespace !== undefined) {
@@ -223,6 +226,13 @@ var renderTextLayer = (function renderTextLayerClosure() {
           var parent = createParents(textItem.markedContent, textLayerFrag,
                                      structs, roleMap);
           parent._element.appendChild(textDiv);
+          mcid = textItem.markedContent.MCID;
+          textDiv.setAttribute('MCID', pageIdx + '/' + mcid);
+          if (!MCIDOffsets[mcid]) {
+            MCIDOffsets[mcid] = 0;
+          }
+          textDiv.setAttribute('startoffset', MCIDOffsets[mcid]);
+          MCIDOffsets[mcid] += textDiv.firstChild.length;
         } else {
           textLayerFrag.appendChild(textDiv);
         }
@@ -255,12 +265,14 @@ var renderTextLayer = (function renderTextLayerClosure() {
    * @param {Array} textDivs
    * @private
    */
-  function TextLayerRenderTask(textContent, container, viewport, textDivs) {
+  function TextLayerRenderTask(textContent, container, viewport, textDivs,
+                               pageIdx) {
     this._textContent = textContent;
     this._container = container;
     this._viewport = viewport;
     textDivs = textDivs || [];
     this._textDivs = textDivs;
+    this._pageIdx = pageIdx;
     this._canceled = false;
     this._capability = createPromiseCapability();
     this._renderTimer = null;
@@ -275,12 +287,6 @@ var renderTextLayer = (function renderTextLayerClosure() {
       if (this._renderTimer !== null) {
         clearTimeout(this._renderTimer);
         this._renderTimer = null;
-      }
-      // clear out the cached elements to make rerendering
-      // in another task work properly
-      var structs = this._textContent.structs || {};
-      for (var id in structs) {
-        delete structs[id]._element;
       }
       this._capability.reject('canceled');
     },
@@ -316,7 +322,8 @@ var renderTextLayer = (function renderTextLayerClosure() {
     var task = new TextLayerRenderTask(renderParameters.textContent,
                                        renderParameters.container,
                                        renderParameters.viewport,
-                                       renderParameters.textDivs);
+                                       renderParameters.textDivs,
+                                       renderParameters.pageIdx);
     task._render(renderParameters.timeout);
     return task;
   }

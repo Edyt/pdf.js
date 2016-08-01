@@ -83,6 +83,7 @@ var TextLayerBuilder = (function TextLayerBuilderClosure() {
         container: textLayerFrag,
         viewport: this.viewport,
         textDivs: this.textDivs,
+        pageIdx: this.pageIdx,
         timeout: timeout
       });
       this.textLayerRenderTask.promise.then(function () {

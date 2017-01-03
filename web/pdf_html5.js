@@ -186,6 +186,9 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
       r.setStart(startcontainer, range.start.realoffset);
       r.setEnd(endcontainer, range.end.realoffset);
       sel.addRange(r);
+      var node = startcontainer.nodeType !== 1 ? startcontainer.parentNode :
+        startcontainer;
+      scrollIntoView(node);
     }
   };
   return PDFHTML5Controller;

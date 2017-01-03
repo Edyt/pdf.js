@@ -27,6 +27,8 @@
 				r.setStart(startcontainer, range.start.offset);
 				r.setEnd(endcontainer, range.end.offset);
 				sel.addRange(r);
+				var node = startcontainer.scrollIntoView ? startcontainer : startcontainer.parentNode;
+				node.scrollIntoView();
 			}
 			//TODO: support keypress selection change, or use
 			//selectionchange event when it's enabled by default in FF

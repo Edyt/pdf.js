@@ -7,7 +7,8 @@
 			document.addEventListener("mouseup", function(e) {
 				var range = getMCRange();
 				if (range) {
-					opener.PDFViewerApplication.pdfViewer.setSelection(range);
+					var p = opener || parent;
+					p.PDFViewerApplication.pdfViewer.setSelection(range);
 				}
 			}, false);
 			function getMarkedContentNode(pageindex, markedid) {

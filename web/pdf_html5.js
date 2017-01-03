@@ -194,11 +194,29 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
 window.addEventListener('keydown', function keydown(evt) {
   if (evt.ctrlKey && evt.keyCode === 120) { //Ctrl+F9
     PDFViewerApplication.pdfViewer.html5.handleEvent().then(function(html){
-      var title = document.title+" (reflow)";
-      var htmlwin = window.open('reflow.html#', "ReflowViewer");
+      var iframeid = 'reflowFrame';
+      var iframe = document.getElementById(iframeid);
+      if(!iframe){
+        iframe = document.createElement('iframe');
+        iframe.src = 'reflow.html';
+        iframe.setAttribute('id', iframeid);
+        var style = iframe.style;
+        style.width='50%';
+        style.height='100%';
+        style.position = 'fixed';
+        style.left = "50%";
+        style.top = "0";
+        style.border = "none";
+        style.background = "white";
+        var container = document.getElementById('outerContainer');
+        container.style.width='50%';
+        container.parentNode.appendChild(iframe);
+      }
+      var htmlwin = iframe.contentWindow;
+      //var title = document.title+" (reflow)";
+      //var htmlwin = window.open('reflow.html#', "ReflowViewer");
       var initialize = function(){
         htmlwin.document.body.innerHTML=html;
-        htmlwin.document.title = title;
         PDFViewerApplication.pdfViewer.html_window = htmlwin;
       };
       if (htmlwin.document.readyState === 'complete') {

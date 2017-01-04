@@ -80,6 +80,9 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                   return;
                 }
                 var roleMap = structTree.RoleMap;
+                if(!('Part' in roleMap)){
+                  roleMap.Part = 'section';
+                }
                 var children = structTree.children;
                 var top = document.createElement('div');
                 var queue = children.slice(0);
@@ -162,7 +165,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         var i = 0, div, startoffset;
         while((div = divs[i++])){
           startoffset = parseInt(div.getAttribute('startoffset'));
-          if (startoffset + div.firstChild.length > pointobj.offset) {
+          if (startoffset + div.firstChild.length >= pointobj.offset) {
             pointobj.realoffset = pointobj.offset - startoffset;
             return div.firstChild;
           }

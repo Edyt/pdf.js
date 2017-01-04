@@ -264,7 +264,7 @@ var Catalog = (function CatalogClosure() {
             assert(isRef(parent.page) || isInt(parent.page), 'invalid page');
             page = parent.page;
           }
-          page = isRef(parent.page) ? this._getPageIndex[page.toString()] : page;
+          page = isRef(page) ? this._getPageIndex(page.toString()) : page;
           elemobj = {type: 'MCR', MCID: obj.get('MCID'), page: page, 
             parentpdfid: parent.pdfid};
         } else if (type.name === 'OBJR') {

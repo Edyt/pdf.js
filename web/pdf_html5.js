@@ -176,49 +176,79 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
       }
     },
 
+    _getPageBoundaryMarkedContent: function(pageindex) {
+      var page = this.pdfViewer.getPageView(pageindex);
+      if (!page) {
+        console.log('No page available with index=', pageindex);
+        return;
+      }
+      if (page && page.textLayer && page.textLayer.renderingDone) {
+        var divs = page.textLayer.textLayerDiv.querySelectorAll('*[mcid]');
+        if(divs.length){
+          return [divs[0].firstChild, divs[divs.length-1].firstChild];
+        }
+      }
+    },
     setSelection: function(range) {
       var startcontainer = this.getMarkedContentNode(range.start);
+      var originalstart = startcontainer;
       var endcontainer = this.getMarkedContentNode(range.end);
       if (!startcontainer || !endcontainer) {
         console.log('Failed to find selection in current document', range);
         return;
       }
-      var sel = window.getSelection();
+      var sel = window.getSelection(), r;
       sel.removeAllRanges();
-      var r = document.createRange();
-      r.setStart(startcontainer, range.start.realoffset);
-      r.setEnd(endcontainer, range.end.realoffset);
-      sel.addRange(r);
-      var node = startcontainer.nodeType !== 1 ? startcontainer.parentNode :
-        startcontainer;
+      while(range.start.page !== range.end.page && startcontainer){
+        r = document.createRange();
+        r.setStart(startcontainer, range.start.realoffset);
+        var pageboundary = this._getPageBoundaryMarkedContent(range.start.page);
+        if(pageboundary){
+          r.setEnd(pageboundary[1], pageboundary[1].length);
+        }
+        sel.addRange(r);
+        range.start.page += 1;
+        range.start.realoffset = 0;
+        startcontainer = this._getPageBoundaryMarkedContent(range.start.page);
+        if(startcontainer){
+          startcontainer = startcontainer[0];
+        }
+      }
+      if(startcontainer){
+        r = document.createRange();
+        r.setStart(startcontainer, range.start.realoffset);
+        r.setEnd(endcontainer, range.end.realoffset);
+        sel.addRange(r);
+      }
+      var node = originalstart.nodeType !== 1 ? originalstart.parentNode :
+        originalstart;
       scrollIntoView(node);
     }
   };
   return PDFHTML5Controller;
 })();
 
-window.addEventListener('keydown', function keydown(evt) {
-  if (evt.ctrlKey && evt.keyCode === 120) { //Ctrl+F9
-    PDFViewerApplication.pdfViewer.html5.handleEvent().then(function(html){
-      var iframeid = 'reflowFrame';
-      var iframe = document.getElementById(iframeid);
-      if(!iframe){
-        iframe = document.createElement('iframe');
-        iframe.src = 'reflow.html';
-        iframe.setAttribute('id', iframeid);
-        var style = iframe.style;
-        style.width='50%';
-        style.height='100%';
-        style.position = 'fixed';
-        style.left = "50%";
-        style.top = "0";
-        style.border = "none";
-        style.background = "white";
-        var container = document.getElementById('outerContainer');
-        container.style.width='50%';
-        container.parentNode.appendChild(iframe);
-      }
-      var htmlwin = iframe.contentWindow;
+function showReflow(){
+  var iframeid = 'reflowFrame';
+  var iframe = document.getElementById(iframeid);
+  if(!iframe){
+    iframe = document.createElement('iframe');
+    iframe.src = 'reflow.html';
+    iframe.setAttribute('id', iframeid);
+    var style = iframe.style;
+    style.width='50%';
+    style.height='100%';
+    style.position = 'fixed';
+    style.left = "50%";
+    style.top = "0";
+    style.border = "none";
+    style.background = "white";
+    var container = document.getElementById('outerContainer');
+    container.style.width='50%';
+    container.parentNode.appendChild(iframe);
+  }
+  PDFViewerApplication.pdfViewer.html5.handleEvent().then(function(html){
+    var htmlwin = iframe.contentWindow;
       //var title = document.title+" (reflow)";
       //var htmlwin = window.open('reflow.html#', "ReflowViewer");
       var initialize = function(){

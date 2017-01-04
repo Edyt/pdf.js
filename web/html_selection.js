@@ -31,6 +31,29 @@ function getMCEndPoint(node, offset) {
   offset = mcidnode[1];
   mcidnode = mcidnode[0];
 	if (mcidnode) {
+    if(/^\s*$/.test(mcidnode.textContent)){
+      //all spaces mcid are not created in pdf.js, find a neighbor which is not empty
+      var attemps = [[mcidnode.previousSibling, -1], [mcidnode.nextSibling, 0]];
+      if(offset) {
+        //swap the 2 elements in the attempts list
+        attemps.push(attempts.shift());
+      }
+      attemps.every(function(attemp){
+        var node = attemp[0], localoffset = attemp[1];
+        if(node && node.getAttribute){
+          if(node.getAttribute('mcid')){
+            if(localoffset<0){
+              offset = node.firstChild.length;
+            }else{
+              offset = localoffset;
+            }
+            mcidnode = node;
+            return false;
+          }
+        }
+        return true;
+      });
+    }
 		var mcid = mcidnode.getAttribute('mcid');
 		mcid = mcid.split('/');
     if (mcidnode.getAttribute('startoffset')) {

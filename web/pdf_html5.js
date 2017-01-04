@@ -261,13 +261,19 @@ function showReflow(){
         htmlwin.onload = initialize;
       }
     });
+}
+/*window.addEventListener('keydown', function keydown(evt) {
+  if (evt.ctrlKey && evt.keyCode === 120) { //Ctrl+F9
+    showReflow();
   }
-});
+});*/
 window.addEventListener('load', function(){
   var setDocument = PDFViewerApplication.pdfViewer.setDocument;
   PDFViewerApplication.pdfViewer.setDocument = function(){
     var ret = setDocument.apply(this, arguments);
     this.html5 = new PDFHTML5Controller({pdfViewer: this});
+    showReflow();
+    //setTimeout(showReflow, 0);
     //this.html5.handleEvent();
     return ret;
   };

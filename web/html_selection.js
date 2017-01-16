@@ -36,7 +36,7 @@ function getMCEndPoint(node, offset) {
       var attemps = [[mcidnode.previousSibling, -1], [mcidnode.nextSibling, 0]];
       if(offset) {
         //swap the 2 elements in the attempts list
-        attemps.push(attempts.shift());
+        attemps.push(attemps.shift());
       }
       attemps.every(function(attemp){
         var node = attemp[0], localoffset = attemp[1];

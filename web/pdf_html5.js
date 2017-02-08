@@ -189,12 +189,16 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         }
       }
     },
-    markValidationError: function(mcidString) {
+    markValidationError: function(mcidString, problemType) {
       var selector = '[' + mcidString + ']';
       var elements = document.querySelectorAll(selector);
       var element = elements[0];
       if (element) {
-        element.classList.add("validation-error");
+        if (problemType === "error") {
+          element.classList.add("validation-error");
+        } else {
+          element.classList.add("validation-warning");
+        }
       }
     },
     setSelection: function(range) {
@@ -290,8 +294,8 @@ window.addEventListener('load', function(){
     this.html5.setSelection(range);
   };
 
-  PDFViewerApplication.pdfViewer.markValidationError = function(mcidString){
-    this.html5.markValidationError(mcidString);
+  PDFViewerApplication.pdfViewer.markValidationError = function(mcidString, problemType){
+    this.html5.markValidationError(mcidString, problemType);
   };
 });
 document.addEventListener('mouseup', function(e) {

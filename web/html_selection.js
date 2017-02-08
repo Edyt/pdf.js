@@ -81,7 +81,13 @@ function getMCRange() {
 	return range;
 }
 
-var forbiddenClause = "The manipulator";
+var forbiddenClauses = {
+  "in the spirit of": "error",
+  "spirit of invention": "error",
+  "approximately": "warning",
+  "about": "warning",
+  "substantially": "warning"
+};
 
 function getRegexForClause(clause) {
   var tokens = clause.split(" ");
@@ -96,7 +102,13 @@ function getRegexForClause(clause) {
 }
 
 function validateHTML(pdfViewer) {
-  var forbiddenRegex = this.getRegexForClause(this.forbiddenClause);
+  Object.keys(forbiddenClauses).forEach(function(clause) {
+    applyForbiddenClause(clause, forbiddenClauses[clause], pdfViewer);
+  });
+}
+
+function applyForbiddenClause(clause, problemType, pdfViewer) {
+  var forbiddenRegex = getRegexForClause(clause);
   var contents = document.documentElement.innerHTML;
   var matches = contents.match(forbiddenRegex);
   if (!matches) {
@@ -110,8 +122,12 @@ function validateHTML(pdfViewer) {
       var selector = '[' + mcIds[j] + ']';
       var elements = document.querySelectorAll(selector);
       var element = elements[0];
-      element.classList.add("validation-error");
-      pdfViewer.markValidationError(mcIds[j]);
+      if (problemType === "error") {
+        element.classList.add("validation-error");
+      } else {
+        element.classList.add("validation-warning");
+      }
+      pdfViewer.markValidationError(mcIds[j], problemType);
     }
   }
 }

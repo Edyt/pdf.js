@@ -32,10 +32,6 @@ var Util = sharedUtil.Util;
 var createPromiseCapability = sharedUtil.createPromiseCapability;
 var CustomStyle = displayDOMUtils.CustomStyle;
 var PDFJS = sharedGlobal.PDFJS;
-var forbiddenTexts = new Map();
-
-forbiddenTexts.set("in", "in the spirit of");
-forbiddenTexts.set("bla", "bla foo bar");
 
 /**
  * Text layer render parameters.
@@ -118,14 +114,9 @@ var renderTextLayer = (function renderTextLayerClosure() {
       return firstparent;
   }
 
-  function appendText(textDivs, viewport, geom, styles, shouldHighlight) {
+  function appendText(textDivs, viewport, geom, styles) {
     var style = styles[geom.fontName];
     var textDiv = document.createElement('div');
-
-    if (shouldHighlight) {
-      textDiv.className += " validation-error";
-    }
-
     textDivs.push(textDiv);
     if (isAllWhitespace(geom.str)) {
       textDiv.dataset.isWhitespace = true;
@@ -157,6 +148,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
     textDiv.style.top = top + 'px';
     textDiv.style.fontSize = fontHeight + 'px';
     textDiv.style.fontFamily = style.fontFamily;
+
     textDiv.textContent = geom.str;
     // |fontName| is only used by the Font Inspector. This test will succeed
     // when e.g. the Font Inspector is off but the Stepper is on, but it's
@@ -303,34 +295,8 @@ var renderTextLayer = (function renderTextLayerClosure() {
       var textItems = this._textContent.items;
       var textDivs = this._textDivs;
       var viewport = this._viewport;
-      var wordsToHighlightNumber = 0;
       for (var i = 0, len = textItems.length; i < len; i++) {
-        if (wordsToHighlightNumber === 0) {
-          var matches = true;
-          var item = textItems[i].str.toLowerCase();
-          var forbiddenText = forbiddenTexts.get(item);
-          if (forbiddenText) {
-            // we have a match
-            var forbiddenTextItems = forbiddenText.split(" ");
-            forbiddenTextItems = addSpaces(forbiddenTextItems);
-            for (var j = 1; j < forbiddenTextItems.length && j + i < len; j++) {
-              if (textItems[i + j].str.toLowerCase() !== forbiddenTextItems[j].toLowerCase()) {
-                matches = false;
-                break;
-              }
-            }
-            if (matches) {
-              wordsToHighlightNumber = forbiddenTextItems.length;
-            }
-          }
-        }
-        var shouldHighlight = false;
-        if (wordsToHighlightNumber > 0) {
-          shouldHighlight = true;
-          wordsToHighlightNumber = wordsToHighlightNumber - 1;
-        }
-        appendText(textDivs, viewport, textItems[i], this._textContent.styles, shouldHighlight);
-
+        appendText(textDivs, viewport, textItems[i], this._textContent.styles);
       }
 
       if (!timeout) { // Render right away
@@ -344,17 +310,6 @@ var renderTextLayer = (function renderTextLayerClosure() {
       }
     }
   };
-
-  function addSpaces(array) {
-    var result = [];
-    for (var i = 0; i < array.length; i++) {
-      result.push(array[i]);
-      if (i !== (array.length - 1)) {
-        result.push(" ");
-      }
-    }
-    return result;
-  }
 
 
   /**

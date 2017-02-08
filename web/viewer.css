@@ -1933,11 +1933,3 @@ html[dir='rtl'] #documentPropertiesOverlay .row > * {
     display: none;
   }
 }
-
-.validation-error {
-  background-color: red;
-}
-
-.validation-warning {
-  background-color: yellow;
-}

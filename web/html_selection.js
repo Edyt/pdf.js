@@ -89,6 +89,10 @@ var forbiddenClauses = {
   "substantially": "warning"
 };
 
+var forbiddenRegexes = {
+  "<p\\s[^>]*?>(<span\\s[^>]*?>[A-Z\\s]+</span>)+</p>": "warning" // ALL UPPERCASE PARAGRAPH // TODO unicode support
+}
+
 function getRegexForClause(clause) {
   var tokens = clause.split(" ");
   var result = "";
@@ -105,10 +109,18 @@ function validateHTML(pdfViewer) {
   Object.keys(forbiddenClauses).forEach(function(clause) {
     applyForbiddenClause(clause, forbiddenClauses[clause], pdfViewer);
   });
+  Object.keys(forbiddenRegexes).forEach(function(regexString) {
+    var regex = new RegExp(regexString, 'g');
+    applyForbiddenRegex(regex, forbiddenRegexes[regexString], pdfViewer);
+  });
 }
 
 function applyForbiddenClause(clause, problemType, pdfViewer) {
   var forbiddenRegex = getRegexForClause(clause);
+  applyForbiddenRegex(forbiddenRegex, problemType, pdfViewer);
+}
+
+function applyForbiddenRegex(forbiddenRegex, problemType, pdfViewer) {
   var contents = document.documentElement.innerHTML;
   var matches = contents.match(forbiddenRegex);
   if (!matches) {

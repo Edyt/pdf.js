@@ -16,6 +16,10 @@
 				pageindex + '/' + markedid + '"]');
 				return node && node.firstChild;
 			}
+      function validateHTMLInReflow() {
+        var p = opener || parent;
+        validateHTML(p.PDFViewerApplication.pdfViewer);
+      }
 			function setSelection(range) {
 				var startcontainer = getMarkedContentNode(range.start.page,
 								     range.start.mcid);
@@ -33,7 +37,7 @@
 			//TODO: support keypress selection change, or use
 			//selectionchange event when it's enabled by default in FF
 			//document.addEventListener("keyup", function(e) {
-			//	  console.log(e, getSelection().getRangeAt(0)); 
+			//	  console.log(e, getSelection().getRangeAt(0));
 			//}, false);
 		</script>
 		<style>
@@ -44,6 +48,7 @@
 				background: red;
 			}
 		</style>
+    <link rel="stylesheet" href="validation.css">
 	</head>
 	<body>Loading...</body>
 </html>

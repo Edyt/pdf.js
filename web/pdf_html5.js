@@ -189,6 +189,14 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         }
       }
     },
+    markValidationError: function(mcidString) {
+      var selector = '[' + mcidString + ']';
+      var elements = document.querySelectorAll(selector);
+      var element = elements[0];
+      if (element) {
+        element.classList.add("validation-error");
+      }
+    },
     setSelection: function(range) {
       var startcontainer = this.getMarkedContentNode(range.start);
       var originalstart = startcontainer;
@@ -254,6 +262,7 @@ function showReflow(){
       var initialize = function(){
         htmlwin.document.body.innerHTML=html;
         PDFViewerApplication.pdfViewer.html_window = htmlwin;
+        htmlwin.validateHTMLInReflow();
       };
       if (htmlwin.document.readyState === 'complete') {
         initialize();
@@ -279,6 +288,10 @@ window.addEventListener('load', function(){
   };
   PDFViewerApplication.pdfViewer.setSelection = function(range){
     this.html5.setSelection(range);
+  };
+
+  PDFViewerApplication.pdfViewer.markValidationError = function(mcidString){
+    this.html5.markValidationError(mcidString);
   };
 });
 document.addEventListener('mouseup', function(e) {

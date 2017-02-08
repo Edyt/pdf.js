@@ -1,0 +1,7 @@
+.validation-error {
+  background-color: red;
+}
+
+.validation-warning {
+  background-color: yellow;
+}

@@ -80,3 +80,47 @@ function getMCRange() {
 	}
 	return range;
 }
+
+var forbiddenClause = "The manipulator";
+
+function getRegexForClause(clause) {
+  var tokens = clause.split(" ");
+  var result = "";
+  for (var i = 0; i < tokens.length; i++) {
+    result = result + "<span\\s[^>]*?>".concat(tokens[i]).concat("</span>");
+    if (i != tokens.length - 1) {
+      result = result + "<span\\s[^>]*?>\\s+</span>";
+    }
+  }
+  //result = result + "/gi";
+
+  return new RegExp(result, 'gi');
+}
+
+function validateHTML(pdfViewer) {
+  var forbiddenRegex = this.getRegexForClause(this.forbiddenClause);
+  //var forbiddenRegex = "<span(\\s[^>]*)?>".concat("The").concat("</span>").concat("<span(\\s[^>]*)?>\\s+</span>");
+  var contents = document.documentElement.innerHTML;
+  var matches = contents.match(forbiddenRegex);
+  if (!matches) {
+    return;
+  }
+  for (var i = 0; i < matches.length; i++) {
+    var match = matches[i];
+    var mcidRegex = /mcid="[\d/]+"/g;
+    var mcIds = match.match(mcidRegex);
+    for (var j = 0; j < mcIds.length; j++) {
+      var selector = '[' + mcIds[j] + ']';
+      //var selector = mcIds[j] ;
+      var elements = document.querySelectorAll(selector);
+      var element = elements[0];
+      element.classList.add("validation-error");
+      pdfViewer.markValidationError(mcIds[j]);
+    }
+    // var annotatedMatch = match.replace(/<span /g, "<span class='validation-error' ");
+    // contents = contents.replace(match, annotatedMatch);
+    /* document.open("text/html");
+     document.write(contents);
+     document.close();*/
+  }
+}

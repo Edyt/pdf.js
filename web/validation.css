@@ -5,3 +5,21 @@
 .validation-warning {
   background-color: yellow;
 }
+
+.snippet-hidden {
+  display: none;
+}
+
+.snippet-shown {
+  background-color: lightgrey;
+}
+
+p.expand-control {
+  background-color: lightgray;
+  height: 1.2em;
+  text-align: center;
+}
+
+p.expand-control:after {
+  content: "\21D5";
+}

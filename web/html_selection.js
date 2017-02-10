@@ -1,11 +1,11 @@
 function getMCID(orignode, offset) {
   var node = orignode, divs;
-	if (node.nodeType !== 1) {
-		node = node.parentNode;
-	}
-	while (node && node.getAttribute && !node.getAttribute('mcid')) {
-		node = node.parentNode
-	}
+  if (node.nodeType !== 1) {
+    node = node.parentNode;
+  }
+  while (node && node.getAttribute && !node.getAttribute('mcid')) {
+    node = node.parentNode
+  }
   if(!node.getAttribute) {
     node = orignode.childNodes[offset];
     if(!node){
@@ -24,13 +24,13 @@ function getMCID(orignode, offset) {
       return null;
     }
   }
-	return [node, offset];
+  return [node, offset];
 }
 function getMCEndPoint(node, offset) {
-	var mcidnode = getMCID(node, offset);
+  var mcidnode = getMCID(node, offset);
   offset = mcidnode[1];
   mcidnode = mcidnode[0];
-	if (mcidnode) {
+  if (mcidnode) {
     if(/^\s*$/.test(mcidnode.textContent)){
       //all spaces mcid are not created in pdf.js, find a neighbor which is not empty
       var attemps = [[mcidnode.previousSibling, -1], [mcidnode.nextSibling, 0]];
@@ -54,31 +54,31 @@ function getMCEndPoint(node, offset) {
         return true;
       });
     }
-		var mcid = mcidnode.getAttribute('mcid');
-		mcid = mcid.split('/');
+    var mcid = mcidnode.getAttribute('mcid');
+    mcid = mcid.split('/');
     if (mcidnode.getAttribute('startoffset')) {
       offset += parseInt(mcidnode.getAttribute('startoffset'));
     }
-		return {page: parseInt(mcid[0]),
-		  mcid:parseInt(mcid[1]), offset: offset};
-	}
+    return {page: parseInt(mcid[0]),
+      mcid:parseInt(mcid[1]), offset: offset};
+  }
 }
 function getMCRange() {
-	var domrange = getSelection().getRangeAt(0), range;
-	if (!domrange.collapsed) {
-		range = {};
-		range.start = getMCEndPoint(domrange.startContainer, domrange.startOffset);
-		if (!range.start) {
-			console.error('Failed to obtain range start position');
-			return;
-		}
-		range.end = getMCEndPoint(domrange.endContainer, domrange.endOffset);
-		if (!range.end) {
-			console.error('Failed to obtain range endposition');
-			return;
-		}
-	}
-	return range;
+  var domrange = getSelection().getRangeAt(0), range;
+  if (!domrange.collapsed) {
+    range = {};
+    range.start = getMCEndPoint(domrange.startContainer, domrange.startOffset);
+    if (!range.start) {
+      console.error('Failed to obtain range start position');
+      return;
+    }
+    range.end = getMCEndPoint(domrange.endContainer, domrange.endOffset);
+    if (!range.end) {
+      console.error('Failed to obtain range endposition');
+      return;
+    }
+  }
+  return range;
 }
 
 var forbiddenClauses = {
@@ -113,6 +113,59 @@ function validateHTML(pdfViewer) {
     var regex = new RegExp(regexString, 'g');
     applyForbiddenRegex(regex, forbiddenRegexes[regexString], pdfViewer);
   });
+  hideNonSnippetContent();
+}
+
+const HIDDEN_SNIPPET_CLASS = "snippet-hidden";
+
+function hideNonSnippetContent() {
+  var nodesToHide = document.querySelectorAll("section > :not([snippet='true'])");
+  hideNodes(nodesToHide);
+}
+
+function hideNodes(elementsToHide) {
+  for (var i = 0; i < elementsToHide.length; i++) {
+    var element = elementsToHide[i];
+    element.classList.add(HIDDEN_SNIPPET_CLASS);
+    if (!element.nextSibling || isSnippet(element.nextSibling)) {
+      var par = document.createElement("p");
+      par.classList.add("expand-control");
+      par.addEventListener("click", expandAllNodesUpToNextSnippet, false);
+      element.parentNode.insertBefore(par, element.nextSibling);
+    }
+  }
+}
+
+function isSnippet(element) {
+  return element.attributes.getNamedItem("snippet") !== null;
+}
+
+function expandAllNodesUpToNextSnippet(e) {
+  var element = e.currentTarget;
+  while (element != null && !isSnippet(element)) {
+    element.classList.remove(HIDDEN_SNIPPET_CLASS);
+    element.classList.add("snippet-shown");
+    element.addEventListener("click", hideBetweenSnippets, false);
+    element = element.previousSibling;
+  }
+  e.currentTarget.parentNode.removeChild(e.currentTarget);
+}
+
+function hideBetweenSnippets(e) {
+  var startElement = e.currentTarget;
+  var nodes = [];
+  nodes.push(startElement);
+  var upElement = startElement.previousSibling;
+  while (upElement && !isSnippet(upElement)) {
+    nodes.push(upElement);
+    upElement = upElement.previousSibling;
+  }
+  var downElement = startElement.nextSibling;
+  while (downElement && !isSnippet(downElement)) {
+    nodes.push(downElement);
+    downElement = downElement.nextSibling;
+  }
+  hideNodes(nodes);
 }
 
 function applyForbiddenClause(clause, problemType, pdfViewer) {
@@ -139,6 +192,7 @@ function applyForbiddenRegex(forbiddenRegex, problemType, pdfViewer) {
       } else {
         element.classList.add("validation-warning");
       }
+      element.parentElement.setAttribute("snippet", "true");
       pdfViewer.markValidationError(mcIds[j], problemType);
     }
   }

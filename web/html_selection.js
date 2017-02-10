@@ -82,15 +82,33 @@ function getMCRange() {
 }
 
 var forbiddenClauses = {
-  "in the spirit of": "error",
-  "spirit of invention": "error",
-  "approximately": "warning",
-  "about": "warning",
-  "substantially": "warning"
+  "in the spirit of": {
+    "type": "error",
+    "message": "Lack of clarity"
+  },
+  "spirit of invention": {
+    "type": "error",
+    "message": "Lack of clarity"
+  },
+  "approximately": {
+    "type": "warning",
+    "message": "Is this clear?"
+  },
+  "about": {
+    "type": "warning",
+    "message": "Is this clear?"
+  },
+  "substantially": {
+    "type": "warning",
+    "message": "Is this clear?"
+  }
 };
 
 var forbiddenRegexes = {
-  "<p\\s[^>]*?>(<span\\s[^>]*?>[A-Z\\s]+</span>)+</p>": "warning" // ALL UPPERCASE PARAGRAPH // TODO unicode support
+  "<p\\s[^>]*?>(<span\\s[^>]*?>[A-Z\\s]+</span>)+</p>": { // ALL UPPERCASE PARAGRAPH // TODO unicode support
+    "type": "warning",
+    "message": "Should paragraph be a heading?"
+  }
 }
 
 function getRegexForClause(clause) {
@@ -168,12 +186,26 @@ function hideBetweenSnippets(e) {
   hideNodes(nodes);
 }
 
-function applyForbiddenClause(clause, problemType, pdfViewer) {
+function applyForbiddenClause(clause, problemDescription, pdfViewer) {
   var forbiddenRegex = getRegexForClause(clause);
-  applyForbiddenRegex(forbiddenRegex, problemType, pdfViewer);
+  applyForbiddenRegex(forbiddenRegex, problemDescription, pdfViewer);
 }
 
-function applyForbiddenRegex(forbiddenRegex, problemType, pdfViewer) {
+var applyProblemClassToElement = function (problemType, element) {
+  if (problemType === "error") {
+    element.classList.add("validation-error");
+  } else {
+    element.classList.add("validation-warning");
+  }
+};
+
+var annotateAsSnippet = function (paragraphElement) {
+  paragraphElement.setAttribute("snippet", "true");
+};
+
+function applyForbiddenRegex(forbiddenRegex, problemDescription, pdfViewer) {
+  var problemType = problemDescription["type"];
+  var problemMessage = problemDescription["message"];
   var contents = document.documentElement.innerHTML;
   var matches = contents.match(forbiddenRegex);
   if (!matches) {
@@ -183,17 +215,30 @@ function applyForbiddenRegex(forbiddenRegex, problemType, pdfViewer) {
     var match = matches[i];
     var mcidRegex = /mcid="[\d/]+"/g;
     var mcIds = match.match(mcidRegex);
+    var paragraphElement = null;
     for (var j = 0; j < mcIds.length; j++) {
       var selector = '[' + mcIds[j] + ']';
       var elements = document.querySelectorAll(selector);
       var element = elements[0];
-      if (problemType === "error") {
-        element.classList.add("validation-error");
-      } else {
-        element.classList.add("validation-warning");
-      }
-      element.parentElement.setAttribute("snippet", "true");
+      applyProblemClassToElement(problemType, element);
+      paragraphElement = element.parentElement;
+      annotateAsSnippet(paragraphElement);
       pdfViewer.markValidationError(mcIds[j], problemType);
     }
+    if (paragraphElement) {
+      addMessage(paragraphElement, problemType, problemMessage);
+    }
+  }
+}
+
+function addMessage(paragraphElement, problemType, problemMessage) {
+  var par = document.createElement("p");
+  annotateAsSnippet(par);
+  applyProblemClassToElement(problemType, par);
+  par.textContent = problemMessage;
+  if (paragraphElement.nextSibling) {
+    paragraphElement.parentNode.insertBefore(par, paragraphElement.nextSibling);
+  } else {
+    paragraphElement.parentNode.appendChild(par);
   }
 }

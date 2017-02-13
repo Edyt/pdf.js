@@ -135,6 +135,7 @@ function validateHTML(pdfViewer) {
 }
 
 const HIDDEN_SNIPPET_CLASS = "snippet-hidden";
+const SHOWN_SNIPPET_CLASS = "snippet-shown";
 
 function hideNonSnippetContent() {
   var nodesToHide = document.querySelectorAll("section > :not([snippet='true'])");
@@ -145,6 +146,7 @@ function hideNodes(elementsToHide) {
   for (var i = 0; i < elementsToHide.length; i++) {
     var element = elementsToHide[i];
     element.classList.add(HIDDEN_SNIPPET_CLASS);
+    element.classList.remove(SHOWN_SNIPPET_CLASS);
     if (!element.nextSibling || isSnippet(element.nextSibling)) {
       var par = document.createElement("p");
       par.classList.add("expand-control");
@@ -162,7 +164,7 @@ function expandAllNodesUpToNextSnippet(e) {
   var element = e.currentTarget;
   while (element != null && !isSnippet(element)) {
     element.classList.remove(HIDDEN_SNIPPET_CLASS);
-    element.classList.add("snippet-shown");
+    element.classList.add(SHOWN_SNIPPET_CLASS);
     element.addEventListener("click", hideBetweenSnippets, false);
     element = element.previousSibling;
   }

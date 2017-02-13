@@ -12,6 +12,7 @@
 
 .snippet-shown {
   background-color: lightgrey;
+  display: block;
 }
 
 p.expand-control {

@@ -138,7 +138,7 @@ const HIDDEN_SNIPPET_CLASS = "snippet-hidden";
 const SHOWN_SNIPPET_CLASS = "snippet-shown";
 
 function hideNonSnippetContent() {
-  var nodesToHide = document.querySelectorAll("section > :not([snippet='true'])");
+  var nodesToHide = document.querySelectorAll("section > p:not([snippet='true']), section li:not([snippet='true'])");
   hideNodes(nodesToHide);
 }
 
@@ -147,7 +147,7 @@ function hideNodes(elementsToHide) {
     var element = elementsToHide[i];
     element.classList.add(HIDDEN_SNIPPET_CLASS);
     element.classList.remove(SHOWN_SNIPPET_CLASS);
-    if (!element.nextSibling || isSnippet(element.nextSibling)) {
+    if ( (!element.nextSibling  && !isListItemElement(element)) || (element.nextSibling && isSnippet(element.nextSibling)) ) {
       var par = document.createElement("p");
       par.classList.add("expand-control");
       par.addEventListener("click", expandAllNodesUpToNextSnippet, false);
@@ -160,30 +160,82 @@ function isSnippet(element) {
   return element.attributes.getNamedItem("snippet") !== null;
 }
 
+var isListItemElement = function (element) {
+  return element.tagName.toLowerCase() === "li";
+};
+
+var isListElement = function (element) {
+  return element.tagName.toLowerCase() === "l";
+}
+
 function expandAllNodesUpToNextSnippet(e) {
+  e.preventDefault();
+  e.stopPropagation();
   var element = e.currentTarget;
   while (element != null && !isSnippet(element)) {
+    if (isListElement(element)) {
+      element = element.lastChild;
+      continue;
+    }
     element.classList.remove(HIDDEN_SNIPPET_CLASS);
     element.classList.add(SHOWN_SNIPPET_CLASS);
+    if (isListItemElement(element)) {
+      var children = element.childNodes;
+      for (var i = 0; i < children.length; i++) {
+        var child = children[i];
+        if (!isSnippet(child)) {
+          child.classList.remove(HIDDEN_SNIPPET_CLASS);
+        }
+      }
+    }
     element.addEventListener("click", hideBetweenSnippets, false);
-    element = element.previousSibling;
+    element = getPreviousSibling(element);
   }
   e.currentTarget.parentNode.removeChild(e.currentTarget);
 }
 
+var getPreviousSibling = function (element) {
+  if (!element.previousSibling && isListItemElement(element)) {
+    element = element.parentElement.previousSibling;
+  } else {
+    element = element.previousSibling;
+  }
+  return element;
+};
+
+var getNextSibling = function (element) {
+  if (!element.nextSibling && isListItemElement(element)) {
+    element = element.parentElement.nextSibling;
+  } else {
+    element = element.nextSibling;
+  }
+  return element;
+};
+
 function hideBetweenSnippets(e) {
+  e.preventDefault();
+  e.stopPropagation();
   var startElement = e.currentTarget;
   var nodes = [];
   nodes.push(startElement);
-  var upElement = startElement.previousSibling;
+  var upElement = getPreviousSibling(startElement);
   while (upElement && !isSnippet(upElement)) {
+    if (isListElement(upElement)) {
+      upElement = upElement.lastChild;
+      continue;
+    }
     nodes.push(upElement);
-    upElement = upElement.previousSibling;
+    upElement = getPreviousSibling(upElement);
   }
-  var downElement = startElement.nextSibling;
+  var downElement = getNextSibling(startElement);
+
   while (downElement && !isSnippet(downElement)) {
+    if (isListElement(downElement)) {
+      downElement = downElement.firstChild;
+      continue;
+    }
     nodes.push(downElement);
-    downElement = downElement.nextSibling;
+    downElement = getNextSibling(downElement);
   }
   hideNodes(nodes);
 }
@@ -201,8 +253,10 @@ var applyProblemClassToElement = function (problemType, element) {
   }
 };
 
-var annotateAsSnippet = function (paragraphElement) {
-  paragraphElement.setAttribute("snippet", "true");
+var annotateAsSnippet = function (element) {
+  if (element) {
+    element.setAttribute("snippet", "true");
+  }
 };
 
 function applyForbiddenRegex(forbiddenRegex, problemDescription, pdfViewer) {
@@ -217,18 +271,24 @@ function applyForbiddenRegex(forbiddenRegex, problemDescription, pdfViewer) {
     var match = matches[i];
     var mcidRegex = /mcid="[\d/]+"/g;
     var mcIds = match.match(mcidRegex);
-    var paragraphElement = null;
+    var parentElement = null;
     for (var j = 0; j < mcIds.length; j++) {
       var selector = '[' + mcIds[j] + ']';
       var elements = document.querySelectorAll(selector);
       var element = elements[0];
       applyProblemClassToElement(problemType, element);
-      paragraphElement = element.parentElement;
-      annotateAsSnippet(paragraphElement);
+      parentElement = element.parentElement;
+      annotateAsSnippet(parentElement);
+      if (parentElement.tagName.toLowerCase() === "lbody") {
+        var lblElement = parentElement.previousSibling;
+        annotateAsSnippet(lblElement);
+        var liElement = parentElement.parentElement;
+        annotateAsSnippet(liElement);
+      }
       pdfViewer.markValidationError(mcIds[j], problemType);
     }
-    if (paragraphElement) {
-      addMessage(paragraphElement, problemType, problemMessage);
+    if (parentElement) {
+      addMessage(parentElement, problemType, problemMessage);
     }
   }
 }

@@ -40,6 +40,8 @@ var PDFJS = sharedGlobal.PDFJS;
  * @property {TextContent} textContent - Text content to render (the object is
  *   returned by the page's getTextContent() method).
  * @property {HTMLElement} container - HTML element that will contain text runs.
+ * @property {HTMLElement} textAnnotationsLayerDiv - HTML element for text annotations
+ * @property {Map} annotationsMap - map containing annotations element ids and styles
  * @property {PDFJS.PageViewport} viewport - The target viewport to properly
  *   layout the text runs.
  * @property {Array} textDivs - (optional) HTML elements that are correspond
@@ -177,11 +179,13 @@ var renderTextLayer = (function renderTextLayerClosure() {
       return;
     }
     var textLayerFrag = task._container;
+    var textAnnotationsLayerDiv = task._textAnnotationsLayerDiv;
     var textDivs = task._textDivs;
     var textItems = task._textContent.items;
     var structs = task._textContent.structs;
     var roleMap = task._textContent.roleMap;
     var capability = task._capability;
+    var annotationsMap = task._annotationsMap;
     var textDivsLength = textDivs.length;
 
     // No point in rendering many divs as it would make the browser
@@ -227,12 +231,28 @@ var renderTextLayer = (function renderTextLayerClosure() {
                                      structs, roleMap);
           parent._element.appendChild(textDiv);
           mcid = textItem.markedContent.MCID;
-          textDiv.setAttribute('MCID', pageIdx + '/' + mcid);
+          var fullMCID = pageIdx + '/' + mcid;
+          textDiv.setAttribute('MCID', fullMCID);
           if (!MCIDOffsets[mcid]) {
             MCIDOffsets[mcid] = 0;
           }
           textDiv.setAttribute('startoffset', MCIDOffsets[mcid]);
           MCIDOffsets[mcid] += textDiv.firstChild.length;
+          var annotationStyle = annotationsMap ? annotationsMap.get(fullMCID) : undefined;
+          if (annotationStyle) {
+            var annotationSpan = document.createElement('span');
+            annotationSpan.style.left = textDiv.style.left;
+            annotationSpan.style.top = textDiv.style.top;
+            annotationSpan.style.fontSize = textDiv.style.fontSize;
+            annotationSpan.style.fontFamily = textDiv.style.fontFamily;
+            annotationSpan.style.transform = textDiv.style.transform;
+            annotationSpan.style.width = width + 'px';
+            annotationSpan.style.height = fontSize;
+            annotationSpan.style.opacity = 0.2;
+            annotationSpan.style.position = 'absolute';
+            annotationSpan.classList.add(annotationStyle);
+            textAnnotationsLayerDiv.appendChild(annotationSpan);
+          }
         } else {
           textLayerFrag.appendChild(textDiv);
         }
@@ -265,9 +285,13 @@ var renderTextLayer = (function renderTextLayerClosure() {
    * @param {Array} textDivs
    * @private
    */
-  function TextLayerRenderTask(textContent, container, viewport, textDivs,
+  function TextLayerRenderTask(textContent, container, textAnnotationsLayerDiv,
+                               annotationsMap,
+                               viewport, textDivs,
                                pageIdx) {
     this._textContent = textContent;
+    this._textAnnotationsLayerDiv = textAnnotationsLayerDiv;
+    this._annotationsMap = annotationsMap;
     this._container = container;
     this._viewport = viewport;
     textDivs = textDivs || [];
@@ -321,6 +345,8 @@ var renderTextLayer = (function renderTextLayerClosure() {
   function renderTextLayer(renderParameters) {
     var task = new TextLayerRenderTask(renderParameters.textContent,
                                        renderParameters.container,
+                                       renderParameters.textAnnotationsLayerDiv,
+                                       renderParameters.annotationsMap,
                                        renderParameters.viewport,
                                        renderParameters.textDivs,
                                        renderParameters.pageIdx);

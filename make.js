@@ -748,10 +748,10 @@ target.buildnumber = function() {
   echo();
   echo('### Getting extension build number');
 
-  var lines = exec('git log --format=oneline ' +
-                   config.baseVersion + '..', {silent: true}).output;
+  /*var lines = exec('git log --format=oneline ' +
+                  config.baseVersion + '..', {silent: true}).output;*/
   // Build number is the number of commits since base version
-  BUILD_NUMBER = lines ? lines.match(/\n/g).length : 0;
+  BUILD_NUMBER = 0; //lines ? lines.match(/\n/g).length : 0;
 
   echo('Extension build number: ' + BUILD_NUMBER);
 

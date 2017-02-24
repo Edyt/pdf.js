@@ -368,6 +368,18 @@ var PDFPageView = (function PDFPageViewClosure() {
         textLayerDiv.className = 'textLayer';
         textLayerDiv.style.width = canvasWrapper.style.width;
         textLayerDiv.style.height = canvasWrapper.style.height;
+
+        if (this.annotationLayerFactory && this.annotationLayerFactory.textAnnotations) {
+          textLayerDiv.style.position = 'absolute';
+          textLayerDiv.style.left = 0;
+          textLayerDiv.style.top = 0;
+          var textAnnotationsLayerDiv = document.createElement('div');
+          textAnnotationsLayerDiv.className = 'textAnnotationsLayer';
+          textAnnotationsLayerDiv.style.width = canvasWrapper.style.width;
+          textAnnotationsLayerDiv.style.height = canvasWrapper.style.height;
+          div.appendChild(textAnnotationsLayerDiv);
+        }
+
         if (this.annotationLayer && this.annotationLayer.div) {
           // annotationLayer needs to stay on top
           div.insertBefore(textLayerDiv, this.annotationLayer.div);
@@ -376,6 +388,8 @@ var PDFPageView = (function PDFPageViewClosure() {
         }
 
         textLayer = this.textLayerFactory.createTextLayerBuilder(textLayerDiv,
+                                                                 textAnnotationsLayerDiv,
+                                                                 this.annotationLayerFactory.textAnnotations,
                                                                  this.id - 1,
                                                                  this.viewport);
       }

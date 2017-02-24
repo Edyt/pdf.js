@@ -34,6 +34,8 @@
 var TextLayerBuilder = (function TextLayerBuilderClosure() {
   function TextLayerBuilder(options) {
     this.textLayerDiv = options.textLayerDiv;
+    this.textAnnotationsLayerDiv = options.textAnnotationsLayerDiv;
+    this.annotationsMap = options.annotationsMap;
     this.renderingDone = false;
     this.divContentDone = false;
     this.pageIdx = options.pageIndex;
@@ -81,6 +83,8 @@ var TextLayerBuilder = (function TextLayerBuilderClosure() {
       this.textLayerRenderTask = PDFJS.renderTextLayer({
         textContent: this.textContent,
         container: textLayerFrag,
+        textAnnotationsLayerDiv: this.textAnnotationsLayerDiv,
+        annotationsMap: this.annotationsMap,
         viewport: this.viewport,
         textDivs: this.textDivs,
         pageIdx: this.pageIdx,
@@ -339,9 +343,11 @@ DefaultTextLayerFactory.prototype = {
    * @param {PageViewport} viewport
    * @returns {TextLayerBuilder}
    */
-  createTextLayerBuilder: function (textLayerDiv, pageIndex, viewport) {
+  createTextLayerBuilder: function (textLayerDiv, textAnnotationsLayerDiv, annotationsMap, pageIndex, viewport) {
     return new TextLayerBuilder({
       textLayerDiv: textLayerDiv,
+      textAnnotationsLayerDiv: textAnnotationsLayerDiv,
+      annotationsMap: annotationsMap,
       pageIndex: pageIndex,
       viewport: viewport
     });

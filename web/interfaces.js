@@ -100,7 +100,7 @@ IPDFTextLayerFactory.prototype = {
    * @param {PageViewport} viewport
    * @returns {TextLayerBuilder}
    */
-  createTextLayerBuilder: function (textLayerDiv, pageIndex, viewport) {}
+  createTextLayerBuilder: function (textLayerDiv, textAnnotationsLayerDiv, annotationsMap, pageIndex, viewport) {}
 };
 
 /**

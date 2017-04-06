@@ -240,26 +240,32 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
   return PDFHTML5Controller;
 })();
 
-function showReflow(){
-  var iframeid = 'reflowFrame';
-  var iframe = document.getElementById(iframeid);
-  if(!iframe){
-    iframe = document.createElement('iframe');
-    iframe.src = 'reflow.html';
-    iframe.setAttribute('id', iframeid);
-    var style = iframe.style;
-    style.width='50%';
-    style.height='100%';
-    style.position = 'fixed';
-    style.left = "50%";
-    style.top = "0";
-    style.border = "none";
-    style.background = "white";
-    var container = document.getElementById('outerContainer');
-    container.style.width='50%';
-    container.parentNode.appendChild(iframe);
+function showReflow(showreflow){
+  if(showreflow) {
+    var iframeid = 'reflowFrame';
+    var iframe = document.getElementById(iframeid);
+    if(!iframe){
+      iframe = document.createElement('iframe');
+      iframe.src = 'reflow.html';
+      iframe.setAttribute('id', iframeid);
+      var style = iframe.style;
+      style.width='50%';
+      style.height='100%';
+      style.position = 'fixed';
+      style.left = "50%";
+      style.top = "0";
+      style.border = "none";
+      style.background = "white";
+      var container = document.getElementById('outerContainer');
+      container.style.width='50%';
+      container.parentNode.appendChild(iframe);
+    }
   }
   PDFViewerApplication.pdfViewer.html5.handleEvent().then(function(html){
+    if(!showreflow){
+      parent.onPDFHTML(html, window);
+      return;
+    }
     var htmlwin = iframe.contentWindow;
       //var title = document.title+" (reflow)";
       //var htmlwin = window.open('reflow.html#', "ReflowViewer");
@@ -285,7 +291,7 @@ window.addEventListener('load', function(){
   PDFViewerApplication.pdfViewer.setDocument = function(){
     var ret = setDocument.apply(this, arguments);
     this.html5 = new PDFHTML5Controller({pdfViewer: this});
-    showReflow();
+    showReflow(!parent || parent.htmlOnlyReflow);
     //setTimeout(showReflow, 0);
     //this.html5.handleEvent();
     return ret;

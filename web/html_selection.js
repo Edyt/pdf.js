@@ -64,7 +64,11 @@ function getMCEndPoint(node, offset) {
   }
 }
 function getMCRange() {
-  var domrange = getSelection().getRangeAt(0), range;
+  var sel = getSelection();
+  if (!sel.rangeCount) {
+    return;
+  }
+  var domrange = sel.getRangeAt(0), range;
   if (!domrange.collapsed) {
     range = {};
     range.start = getMCEndPoint(domrange.startContainer, domrange.startOffset);

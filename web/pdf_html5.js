@@ -20,6 +20,20 @@
  * Provides "reflow" view for tagged PDF.
  */
 var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
+  function afteronce(o, f, af) {
+    var original = o[f];
+    if(!original._aftered) {
+      o[f] = function(){
+        try{
+        original.apply(o, arguments);
+        af.apply(o, arguments);
+        }catch(e){
+        }
+        o[f] = original;
+      };
+      o[f].aftered = 1;
+    }
+  };
   function PDFHTML5Controller(options) {
     this.pdfViewer = options.pdfViewer || null;
     //console.log('this.pdfViewer', this.pdfViewer);
@@ -201,7 +215,59 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         }
       }
     },
+    _makeSurePageInView: function(pageindex){
+      var page = this.pdfViewer.getPageView(pageindex);
+      if (!page) {
+        console.log('No page available with index=', page);
+        return;
+      }
+      if (page.renderingState !== RenderingStates.FINISHED) {
+        //page not visible
+        this.pdfViewer.scrollPageIntoView(pageindex+1);
+        var accept, reject;
+        var p = new Promise(function(a, r){
+          accept = a;
+          reject = r;
+        });
+        page.onAfterDraw = function(){
+          if (page.textLayer) {
+            if(!page.textLayer.textLayerRenderTask) {
+              var tl = page.textLayer;
+              tl._a = accept;
+              tl._r = reject;
+              afteronce(tl, "render", function(){
+                if(this.textLayerRenderTask) {
+                  this.textLayerRenderTask.promise.then(this._a).catch(this.r);
+                }else{
+                  this.r();
+                }
+              });
+            } else {
+              //should never happen
+              //page.textLayer.textLayerRenderTask.promise.then(a).catch(r);
+            }
+          }
+        }
+        return p;
+        //if(!page.div || !page.div.parentNode)debugger
+      }
+      if(page.textLayer){// && !page.textLayer.renderingDone) {
+        return page.textLayer.textLayerRenderTask.promise;
+      }
+    },
     setSelection: function(range) {
+      var promise = this._selectPromise = this._makeSurePageInView(range.start.page);
+      if (!promise){
+        return;
+      }
+      promise.then(function(){
+        if(promise === this._selectPromise){
+          delete this._selectPromise;
+          this._setSelection(range);
+        }
+      }.bind(this));
+    },
+    _setSelection: function(range) {
       var startcontainer = this.getMarkedContentNode(range.start);
       var originalstart = startcontainer;
       var endcontainer = this.getMarkedContentNode(range.end);

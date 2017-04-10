@@ -256,6 +256,8 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
       }
     },
     setSelection: function(range) {
+      this.clearHighlight();
+
       var promise = this._selectPromise = this._makeSurePageInView(range.start.page);
       if (!promise){
         return;
@@ -271,12 +273,13 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
       var startcontainer = this.getMarkedContentNode(range.start);
       var originalstart = startcontainer;
       var endcontainer = this.getMarkedContentNode(range.end);
+      var r, needscroll, currentneedscroll;
       if (!startcontainer || !endcontainer) {
         console.log('Failed to find selection in current document', range);
         return;
       }
-      var sel = window.getSelection(), r;
-      sel.removeAllRanges();
+      //var sel = window.getSelection(), r;
+      //sel.removeAllRanges();
       while(range.start.page !== range.end.page && startcontainer){
         r = document.createRange();
         r.setStart(startcontainer, range.start.realoffset);
@@ -284,7 +287,11 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         if(pageboundary){
           r.setEnd(pageboundary[1], pageboundary[1].length);
         }
-        sel.addRange(r);
+        //sel.addRange(r);
+        currentneedscroll = this._highlight(r);
+        if (needscroll == undefined){
+          needscroll = currentneedscroll;
+        }
         range.start.page += 1;
         range.start.realoffset = 0;
         startcontainer = this._getPageBoundaryMarkedContent(range.start.page);
@@ -296,11 +303,47 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         r = document.createRange();
         r.setStart(startcontainer, range.start.realoffset);
         r.setEnd(endcontainer, range.end.realoffset);
-        sel.addRange(r);
+        //sel.addRange(r);
+        currentneedscroll = this._highlight(r);
+        if (needscroll == undefined){
+          needscroll = currentneedscroll;
+        }
       }
-      var node = originalstart.nodeType !== 1 ? originalstart.parentNode :
-        originalstart;
-      scrollIntoView(node);
+      if(needscroll){
+        var node = originalstart.nodeType !== 1 ? originalstart.parentNode :
+          originalstart;
+        scrollIntoView(node);
+      }
+    },
+    _highlight: function(range) {
+      var textlayerdiv = range.startContainer.parentNode.offsetParent;
+      var pagerect = textlayerdiv.getBoundingClientRect();
+      var rect, elem, i = 0, style;
+      var rects = range.getClientRects();
+      var template = document.createElement('div');
+      template.className ="alignedSelection";
+      var viewportHeight = document.body.scrollHeight;
+      var needscroll;
+      while(rect = rects[i++]){
+        elem = template.cloneNode(false);
+        style = elem.style;
+        style.top = Math.round(rect.top - pagerect.top) + "px";
+        style.left = Math.round(rect.left - pagerect.left) + "px";
+        style.width = Math.round(rect.width) + "px";
+        style.height = Math.round(rect.height) + "px";
+        textlayerdiv.appendChild(elem);
+        if (i===1) {
+          needscroll = rect.top < 25 || rect.top > viewportHeight - 25;
+        }
+      }
+      return needscroll;
+    },
+    clearHighlight: function() {
+      var root = this.pdfViewer.viewer;
+      var highlights = root.querySelectorAll(".alignedSelection");
+      [].slice.apply(highlights).forEach(function(e){
+        e.parentNode.removeChild(e);
+      });
     }
   };
   return PDFHTML5Controller;
@@ -371,6 +414,7 @@ window.addEventListener('load', function(){
   };
 });
 document.addEventListener('mouseup', function(e) {
+  PDFViewerApplication.pdfViewer.html5.clearHighlight();
   if (!PDFViewerApplication.pdfViewer.html_window) {
     return;
   }

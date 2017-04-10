@@ -24,7 +24,11 @@
   line-height: 1.0;
 }
 
-.textLayer div[textLayerDiv] {
+.textLayer .alignedSelection {
+  z-index: -1;
+}
+
+.textLayer div[textLayerDiv], .textLayer .alignedSelection {
   color: transparent;
   position: absolute;
   white-space: pre;
@@ -37,7 +41,7 @@
   font-weight: normal;
 }
 
-.textLayer .highlight {
+.textLayer .highlight, .textLayer .alignedSelection {
   margin: -1px;
   padding: 1px;
 

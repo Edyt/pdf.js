@@ -208,6 +208,14 @@ var renderTextLayer = (function renderTextLayerClosure() {
     var mcid;
     for (var i = 0; i < textDivsLength; i++) {
       var textDiv = textDivs[i];
+      var textItem = textItems[i];
+      if (textItem.markedContent) {
+        mcid = textItem.markedContent.MCID;
+        if (!MCIDOffsets[mcid]) {
+          MCIDOffsets[mcid] = 0;
+        }
+        MCIDOffsets[mcid] += textItem.str.length;
+      }
       if (textDiv.dataset.isWhitespace !== undefined) {
         continue;
       }
@@ -225,19 +233,13 @@ var renderTextLayer = (function renderTextLayerClosure() {
       var width = ctx.measureText(textDiv.textContent).width;
       if (width > 0) {
         textDiv.setAttribute('textLayerDiv', true);
-        var textItem = textItems[i];
         if (textItem.markedContent) {
           var parent = createParents(textItem.markedContent, textLayerFrag,
                                      structs, roleMap);
           parent._element.appendChild(textDiv);
-          mcid = textItem.markedContent.MCID;
           var fullMCID = pageIdx + '/' + mcid;
           textDiv.setAttribute('MCID', fullMCID);
-          if (!MCIDOffsets[mcid]) {
-            MCIDOffsets[mcid] = 0;
-          }
           textDiv.setAttribute('startoffset', MCIDOffsets[mcid]);
-          MCIDOffsets[mcid] += textDiv.firstChild.length;
           var annotationStyle = annotationsMap ? annotationsMap.get(fullMCID) : undefined;
           if (annotationStyle) {
             var annotationSpan = document.createElement('span');

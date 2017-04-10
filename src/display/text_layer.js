@@ -204,19 +204,21 @@ var renderTextLayer = (function renderTextLayerClosure() {
     var lastFontSize;
     var lastFontFamily;
     var pageIdx = task._pageIdx;
-    var MCIDOffsets = {};
+    var MCIDOffsets = {}, MCIDLastWhiteSpace  = {};
     var mcid;
     for (var i = 0; i < textDivsLength; i++) {
       var textDiv = textDivs[i];
       var textItem = textItems[i];
       if (textItem.markedContent) {
         mcid = textItem.markedContent.MCID;
-        if (!MCIDOffsets[mcid]) {
-          MCIDOffsets[mcid] = 0;
-        }
-        MCIDOffsets[mcid] += textItem.str.length;
+      }else{
+        mcid = null;
       }
       if (textDiv.dataset.isWhitespace !== undefined) {
+        if(mcid && MCIDOffsets[mcid] && !MCIDLastWhiteSpace[mcid]){
+          MCIDOffsets[mcid] += 1;
+          MCIDLastWhiteSpace[mcid] = true;
+        }
         continue;
       }
 
@@ -239,7 +241,12 @@ var renderTextLayer = (function renderTextLayerClosure() {
           parent._element.appendChild(textDiv);
           var fullMCID = pageIdx + '/' + mcid;
           textDiv.setAttribute('MCID', fullMCID);
+          
+          if (!MCIDOffsets[mcid]) {
+            MCIDOffsets[mcid] = 0;
+          }
           textDiv.setAttribute('startoffset', MCIDOffsets[mcid]);
+
           var annotationStyle = annotationsMap ? annotationsMap.get(fullMCID) : undefined;
           if (annotationStyle) {
             var annotationSpan = document.createElement('span');
@@ -248,7 +255,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
             annotationSpan.style.fontSize = textDiv.style.fontSize;
             annotationSpan.style.fontFamily = textDiv.style.fontFamily;
             annotationSpan.style.transform = textDiv.style.transform;
-	    annotationSpan.style.width = (textDiv.dataset.canvasWidth ? textDiv.dataset.canvasWidth : width) + 'px';
+      	    annotationSpan.style.width = (textDiv.dataset.canvasWidth ? textDiv.dataset.canvasWidth : width) + 'px';
             annotationSpan.style.height = fontSize;
             annotationSpan.style.opacity = 0.2;
             annotationSpan.style.position = 'absolute';
@@ -273,6 +280,11 @@ var renderTextLayer = (function renderTextLayerClosure() {
         if (transform) {
           CustomStyle.setProp('transform' , textDiv, transform);
         }
+      }
+
+      if(mcid !== null){// && MCIDOffsets[mcid] !== undefined){
+        MCIDOffsets[mcid] += textItem.str.length;
+        delete MCIDLastWhiteSpace[mcid];
       }
     }
     capability.resolve();

@@ -16,24 +16,27 @@
 
 'use strict';
 
+function afteronce(o, f, af) {
+  var original = o[f];
+  if(!original._aftered) {
+    o[f] = function(){
+      var ret;
+      try{
+        ret = original.apply(o, arguments);
+        af.apply(o, arguments);
+      }finally{
+        o[f] = original;
+      }
+      return ret;
+    };
+    o[f].aftered = 1;
+  }
+};
+
 /**
  * Provides "reflow" view for tagged PDF.
  */
 var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
-  function afteronce(o, f, af) {
-    var original = o[f];
-    if(!original._aftered) {
-      o[f] = function(){
-        try{
-        original.apply(o, arguments);
-        af.apply(o, arguments);
-        }catch(e){
-        }
-        o[f] = original;
-      };
-      o[f].aftered = 1;
-    }
-  };
   function PDFHTML5Controller(options) {
     this.pdfViewer = options.pdfViewer || null;
     //console.log('this.pdfViewer', this.pdfViewer);
@@ -390,29 +393,33 @@ function showReflow(showreflow){
       }
     });
 }
+
 /*window.addEventListener('keydown', function keydown(evt) {
   if (evt.ctrlKey && evt.keyCode === 120) { //Ctrl+F9
     showReflow();
   }
 });*/
-window.addEventListener('load', function(){
-  var setDocument = PDFViewerApplication.pdfViewer.setDocument;
-  PDFViewerApplication.pdfViewer.setDocument = function(){
-    var ret = setDocument.apply(this, arguments);
-    this.html5 = new PDFHTML5Controller({pdfViewer: this});
-    showReflow(!parent || parent.htmlOnlyReflow);
-    //setTimeout(showReflow, 0);
-    //this.html5.handleEvent();
-    return ret;
-  };
-  PDFViewerApplication.pdfViewer.setSelection = function(range){
-    this.html5.setSelection(range);
-  };
+window.addEventListener('DOMContentLoaded', function(){
+  afteronce(PDFViewerApplication, "initialize", function(){
+    var setDocument = PDFViewerApplication.pdfViewer.setDocument;
+    PDFViewerApplication.pdfViewer.setDocument = function(){
+      var ret = setDocument.apply(this, arguments);
+      this.html5 = new PDFHTML5Controller({pdfViewer: this});
+      showReflow(!parent || parent.htmlOnlyReflow);
+      //setTimeout(showReflow, 0);
+      //this.html5.handleEvent();
+      return ret;
+    };
+    PDFViewerApplication.pdfViewer.setSelection = function(range){
+      this.html5.setSelection(range);
+    };
 
-  PDFViewerApplication.pdfViewer.markValidationError = function(mcidString, problemType){
-    this.html5.markValidationError(mcidString, problemType);
-  };
-});
+    PDFViewerApplication.pdfViewer.markValidationError = function(mcidString, problemType){
+      this.html5.markValidationError(mcidString, problemType);
+    };
+  });
+}, true);
+
 document.addEventListener('mouseup', function(e) {
   PDFViewerApplication.pdfViewer.html5.clearHighlight();
   if (!PDFViewerApplication.pdfViewer.html_window) {

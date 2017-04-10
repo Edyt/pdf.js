@@ -69,13 +69,14 @@ function getMCRange() {
     return;
   }
   var domrange = sel.getRangeAt(0), range;
-  if (!domrange.collapsed) {
+  if (!domrange.collapsed || sel.rangeCount > 1) {
     range = {};
     range.start = getMCEndPoint(domrange.startContainer, domrange.startOffset);
     if (!range.start) {
       console.error('Failed to obtain range start position');
       return;
     }
+    domrange = sel.getRangeAt(sel.rangeCount - 1);
     range.end = getMCEndPoint(domrange.endContainer, domrange.endOffset);
     if (!range.end) {
       console.error('Failed to obtain range endposition');

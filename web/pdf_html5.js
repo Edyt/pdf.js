@@ -308,7 +308,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         r.setEnd(endcontainer, range.end.realoffset);
         //sel.addRange(r);
         currentneedscroll = this._highlight(r);
-        if (needscroll == undefined){
+        if (needscroll === undefined){
           needscroll = currentneedscroll;
         }
       }
@@ -322,24 +322,79 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
       var textlayerdiv = range.startContainer.parentNode.offsetParent;
       var pagerect = textlayerdiv.getBoundingClientRect();
       var rect, elem, i = 0, style;
-      var rects = range.getClientRects();
+      var rects = this._getClientRects(range); //range.getClientRects();
       var template = document.createElement('div');
-      template.className ="alignedSelection";
+      template.className ='alignedSelection';
       var viewportHeight = document.body.scrollHeight;
       var needscroll;
       while(rect = rects[i++]){
         elem = template.cloneNode(false);
         style = elem.style;
-        style.top = Math.round(rect.top - pagerect.top) + "px";
-        style.left = Math.round(rect.left - pagerect.left) + "px";
-        style.width = Math.round(rect.width) + "px";
-        style.height = Math.round(rect.height) + "px";
+        style.top = Math.round(rect.top - pagerect.top) + 'px';
+        style.left = Math.round(rect.left - pagerect.left) + 'px';
+        style.width = Math.round(rect.width) + 'px';
+        style.height = Math.round(rect.height) + 'px';
         textlayerdiv.appendChild(elem);
         if (i===1) {
           needscroll = rect.top < 25 || rect.top > viewportHeight - 25;
         }
       }
       return needscroll;
+    },
+    _firstParentWithoutMCID: function(node){
+      while (node.nodeType !== 1 || node.getAttribute('mcid')){
+        node = node.parentNode;
+      }
+      return node;
+    },
+    _nextElement: function(start, end) {
+      var cur = start, next;
+      while(!cur.nextSibling) {
+        cur = cur.parentNode;
+      }
+      next = cur.nextSibling;
+      while (next && next !== end && next.contains(end)) {
+        next = next.firstChild;
+      }
+      return next;
+    },
+    _getClientRects: function(range) {
+      //only mcid spans have absolute positioning and sizing, while their
+      //structural parent (like paragraph) does not, so any rects returned by
+      //range on a block level elements are wrong. find the block level
+      //elements and use the union of all children mcid spans to figure out the
+      //size
+      var startParent = this._firstParentWithoutMCID(range.startContainer);
+      var endParent = this._firstParentWithoutMCID(range.endContainer);
+      var spans, clone, spantext;
+      var results = [];
+      function collectRects(rects){
+        results = results.concat([].slice.apply(rects));
+      }
+      if (startParent !== endParent) {
+        spans = startParent.querySelectorAll("[mcid]");
+
+        clone = range.cloneRange();
+        spantext = spans[spans.length-1].firstChild;
+        clone.setEnd(spantext, spantext.length);
+        collectRects(clone.getClientRects());
+        startParent = this._nextElement(startParent, endParent);
+        while(true){
+          if (startParent && startParent !== endParent){
+            spans = startParent.querySelectorAll("[mcid]");
+            [].slice.apply(spans).forEach(function(s){
+              collectRects(s.getClientRects());
+            });
+            startParent = this._nextElement(startParent, endParent);
+          } else {
+            startParent = endParent;
+            range.setStart(startParent, 0);
+            break;
+          }
+        }
+      }
+      collectRects(range.getClientRects());
+      return results;
     },
     clearHighlight: function() {
       var root = this.pdfViewer.viewer;

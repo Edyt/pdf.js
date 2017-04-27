@@ -37,11 +37,81 @@ function afteronce(o, f, af) {
  * Provides "reflow" view for tagged PDF.
  */
 var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
+  function RangesCollection(){
+    this._map = {};
+  }
+  RangesCollection.prototype = {
+    add: function(range, affected) {
+      if(!affected){
+        affected = {};
+      }
+      if(range.forEach) {
+        range.forEach(function(r){
+          this.add(r, affected);
+        }, this);
+        return;
+      }
+      var start = range.start.page, end = range.end.page;
+      while(start <= end){
+        if(this._map[start]){
+          this._map[start].push(range);
+        } else {
+          this._map[start] = [range];
+        }
+        affected[start] = 1;
+        start++;
+      }
+      return affected;
+    },
+    remove: function(range, affected) {
+      if(!affected){
+        affected = {};
+      }
+      if(range.forEach) {
+        range.forEach(function(r){
+          this.remove(r, affected);
+        }, this);
+        return;
+      }
+      var start = range.start.page, end = range.end.page;
+      var list, index;
+      while(start <= end){
+        list = this._map[start];
+        if(list){
+          index = list.indexOf(range);
+          if(index >=0) {
+            list.splice(index, 1);
+          }
+          affected[start] = 1;
+        }
+        start++;
+      }
+    },
+    get: function(page){
+      return this._map[page];
+    }
+  };
+
   function PDFHTML5Controller(options) {
     this.pdfViewer = options.pdfViewer || null;
     //console.log('this.pdfViewer', this.pdfViewer);
     this.startedTextExtraction = false;
     this.pagesPromise = this.pdfViewer.pagesPromise;
+    this.highlightRanges = new RangesCollection();
+    if (this.pdfViewer && this.pdfViewer.viewer) {
+      var self = this;
+      this.pdfViewer.viewer.addEventListener('textlayerrendered', function(e){
+        if(!e.detail || !e.detail.pageNumber){
+          return;
+        }
+        var pageindex = e.detail.pageNumber - 1;
+        var scroll = false;
+        if (self._lastHighlight){
+          scroll = pageindex === self._lastHighlight.start.page;
+        }
+        self._refreshPage(pageindex, scroll);
+      });
+    }
 
     /*var events = [
       'find',
@@ -208,8 +278,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
     },
     markValidationError: function(mcidString, problemType) {
       var selector = '[' + mcidString + ']';
-      var elements = document.querySelectorAll(selector);
-      var element = elements[0];
+      var element = this.pdfViewer.viewer.querySelector(selector);
       if (element) {
         if (problemType === "error") {
           element.classList.add("validation-error");
@@ -258,8 +327,45 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         return page.textLayer.textLayerRenderTask.promise;
       }
     },
+    _textLayerPresent: function(pageindex) {
+      var page = this.pdfViewer.getPageView(pageindex);
+      if (!page) {
+        console.log('_textLayerPresent: No page available with index=', page);
+        return;
+      }
+      if (page.renderingState === RenderingStates.FINISHED) {
+        return page.textLayer && page.textLayer.renderingDone;
+      }
+    },
+    _refreshPage: function(pageindex, shouldscroll) {
+      var page = this.pdfViewer.getPageView(pageindex);
+      this.clearHighlight(page.textLayer.textLayerDiv);
+
+      var ranges = this.highlightRanges.get(pageindex);
+      if (!ranges) {
+        return;
+      }
+      ranges.forEach(function(range, index){
+        this._setSelectionOnPage(range, pageindex, shouldscroll && index===0);
+      }, this);
+    },
     setSelection: function(range) {
-      this.clearHighlight();
+      //this.clearHighlight();
+      var affectedpages;
+      if(this._lastHighlight){
+        affectedpages = this.highlightRanges.remove(this._lastHighlight);
+      }
+      affectedpages = this.highlightRanges.add(range, affectedpages);
+      this._lastHighlight = range;
+      var pagesindexes = Object.keys(affectedpages).map(function(p){return parseInt(p)});
+      var focuspage = range.start.page;
+      pagesindexes.forEach(function(p){
+        if(this._textLayerPresent(p)){
+          this._refreshPage(p, focuspage === p);
+        }
+      }, this);
+      this.pdfViewer.scrollPageIntoView(focuspage + 1);
+      return;
 
       var promise = this._selectPromise = this._makeSurePageInView(range.start.page);
       if (!promise){
@@ -272,7 +378,27 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         }
       }.bind(this));
     },
-    _setSelection: function(range) {
+    _updateRange: function(range, which, pageindex, boundary){
+      if (range[which].page !== pageindex) {
+        var realoffset = which === "end" ? boundary.length : 0;
+        var parent = boundary.parentNode;
+        var mcid = parent.getAttribute("mcid").split("/")[1];
+        range[which] = {page: pageindex,
+          offset: realoffset + (parseInt(parent.getAttribute("startoffset")) || 0),
+          mcid: boundary.parentNode.getAttribute("mcid").split("/")[1]};
+      }
+    },
+    _setSelectionOnPage: function(range, pageindex, trytoscroll) {
+      var newrange = range;
+      if(range.start.page !== pageindex || range.end.page !== pageindex) {
+        newrange = Object.create(range);
+        var pageboundary = this._getPageBoundaryMarkedContent(pageindex);
+        this._updateRange(newrange, "start", pageindex, pageboundary[0]);
+        this._updateRange(newrange, "end", pageindex, pageboundary[1]);
+      }
+      this._setSelection(newrange, trytoscroll);
+    },
+    _setSelection: function(range, tryToScroll) {
       var startcontainer = this.getMarkedContentNode(range.start);
       var originalstart = startcontainer;
       var endcontainer = this.getMarkedContentNode(range.end);
@@ -312,7 +438,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
           needscroll = currentneedscroll;
         }
       }
-      if(needscroll){
+      if(needscroll && tryToScroll){
         var node = originalstart.nodeType !== 1 ? originalstart.parentNode :
           originalstart;
         scrollIntoView(node);
@@ -396,8 +522,8 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
       collectRects(range.getClientRects());
       return results;
     },
-    clearHighlight: function() {
-      var root = this.pdfViewer.viewer;
+    clearHighlight: function(root) {
+      root = root || this.pdfViewer.viewer;
       var highlights = root.querySelectorAll(".alignedSelection");
       [].slice.apply(highlights).forEach(function(e){
         e.parentNode.removeChild(e);

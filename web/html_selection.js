@@ -274,7 +274,7 @@ function applyForbiddenRegex(forbiddenRegex, problemDescription, pdfViewer) {
   }
   for (var i = 0; i < matches.length; i++) {
     var match = matches[i];
-    var mcidRegex = /mcid="[\d/]+"/g;
+    var mcidRegex = /mcid="[\d\/]+"/g;
     var mcIds = match.match(mcidRegex);
     var parentElement = null;
     for (var j = 0; j < mcIds.length; j++) {

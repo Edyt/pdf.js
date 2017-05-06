@@ -49,7 +49,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         range.forEach(function(r){
           this.add(r, affected);
         }, this);
-        return;
+        return affected;
       }
       var start = range.start.page, end = range.end.page;
       while(start <= end){
@@ -71,7 +71,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         range.forEach(function(r){
           this.remove(r, affected);
         }, this);
-        return;
+        return affected;
       }
       var start = range.start.page, end = range.end.page;
       var list, index;
@@ -86,6 +86,15 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         }
         start++;
       }
+      return affected;
+    },
+    clear: function(affected) {
+      if(!affected){
+        affected = {};
+      }
+      Object.keys(this._map).forEach(function(k){ affected[k] = 1 });
+      this._map = {};
+      return affected;
     },
     get: function(page){
       return this._map[page];
@@ -107,7 +116,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         var pageindex = e.detail.pageNumber - 1;
         var scroll = false;
         if (self._lastHighlight){
-          scroll = pageindex === self._lastHighlight.start.page;
+          scroll = pageindex === (self._lastHighlight[0] || self._lastHighlight).start.page;
         }
         self._refreshPage(pageindex, scroll);
       });
@@ -349,25 +358,40 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         this._setSelectionOnPage(range, pageindex, shouldscroll && index===0);
       }, this);
     },
-    setSelection: function(range) {
+    setSelection: function(range, type) {
       //this.clearHighlight();
+      var firstrange = range[0] || range;
       var affectedpages;
-      if(this._lastHighlight){
-        affectedpages = this.highlightRanges.remove(this._lastHighlight);
+      if(type === 'align'){
+        if(this._lastHighlight){
+          affectedpages = this.highlightRanges.remove(this._lastHighlight, affectedpages);
+        }
+      } else {
+        affectedpages = this.highlightRanges.clear(affectedpages);
+        if(this._lastHighlight){
+          affectedpages = this.highlightRanges.add(this._lastHighlight, affectedpages);
+        }
       }
+
       affectedpages = this.highlightRanges.add(range, affectedpages);
-      this._lastHighlight = range;
+
+      if(type){
+        this._lastHighlight = range;
+      }
       var pagesindexes = Object.keys(affectedpages).map(function(p){return parseInt(p)});
-      var focuspage = range.start.page;
+      var focuspage = type === 'align' && firstrange && firstrange.start.page;
       pagesindexes.forEach(function(p){
         if(this._textLayerPresent(p)){
+          console.log('refreshing already renderred pages', p);
           this._refreshPage(p, focuspage === p);
         }
       }, this);
-      this.pdfViewer.scrollPageIntoView(focuspage + 1);
+      if(firstrange){
+        this.pdfViewer.scrollPageIntoView(focuspage + 1);
+      }
       return;
 
-      var promise = this._selectPromise = this._makeSurePageInView(range.start.page);
+      var promise = this._selectPromise = this._makeSurePageInView(focuspage);
       if (!promise){
         return;
       }
@@ -407,6 +431,8 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         console.log('Failed to find selection in current document', range);
         return;
       }
+      var className = range.type==="align" ? "alignedSelection" : range.type;
+
       //var sel = window.getSelection(), r;
       //sel.removeAllRanges();
       while(range.start.page !== range.end.page && startcontainer){
@@ -417,7 +443,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
           r.setEnd(pageboundary[1], pageboundary[1].length);
         }
         //sel.addRange(r);
-        currentneedscroll = this._highlight(r);
+        currentneedscroll = this._highlight(r, className);
         if (needscroll == undefined){
           needscroll = currentneedscroll;
         }
@@ -433,7 +459,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         r.setStart(startcontainer, range.start.realoffset);
         r.setEnd(endcontainer, range.end.realoffset);
         //sel.addRange(r);
-        currentneedscroll = this._highlight(r);
+        currentneedscroll = this._highlight(r, className);
         if (needscroll === undefined){
           needscroll = currentneedscroll;
         }
@@ -444,13 +470,13 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         scrollIntoView(node);
       }
     },
-    _highlight: function(range) {
+    _highlight: function(range, className) {
       var textlayerdiv = range.startContainer.parentNode.offsetParent;
       var pagerect = textlayerdiv.getBoundingClientRect();
       var rect, elem, i = 0, style;
       var rects = this._getClientRects(range); //range.getClientRects();
       var template = document.createElement('div');
-      template.className ='alignedSelection';
+      template.className = className;//'alignedSelection';
       var viewportHeight = document.body.scrollHeight;
       var needscroll;
       while(rect = rects[i++]){
@@ -522,9 +548,10 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
       collectRects(range.getClientRects());
       return results;
     },
-    clearHighlight: function(root) {
+    clearHighlight: function(root, cssquery) {
+      console.log('clearHighlight:', root && root.parentNode);
       root = root || this.pdfViewer.viewer;
-      var highlights = root.querySelectorAll(".alignedSelection");
+      var highlights = root.querySelectorAll(cssquery || '.alignedSelection, .validation-warning, .validation-error');
       [].slice.apply(highlights).forEach(function(e){
         e.parentNode.removeChild(e);
       });
@@ -591,8 +618,8 @@ window.addEventListener('DOMContentLoaded', function(){
       //this.html5.handleEvent();
       return ret;
     };
-    PDFViewerApplication.pdfViewer.setSelection = function(range){
-      this.html5.setSelection(range);
+    PDFViewerApplication.pdfViewer.setSelection = function(range, type){
+      this.html5.setSelection(range, type);
     };
 
     PDFViewerApplication.pdfViewer.markValidationError = function(mcidString, problemType){
@@ -602,11 +629,12 @@ window.addEventListener('DOMContentLoaded', function(){
 }, true);
 
 document.addEventListener('mouseup', function(e) {
-  PDFViewerApplication.pdfViewer.html5.clearHighlight();
+  //only clear out aligned format highlighting
+  PDFViewerApplication.pdfViewer.html5.clearHighlight(null, '.alignedSelection');
   if (!PDFViewerApplication.pdfViewer.html_window) {
     return;
   }
-  var range = getMCRange();
+  var range = getMCRange(true);
   if (range) {
     console.log('mouseup set selection', range);
     PDFViewerApplication.pdfViewer.html_window.setSelection(range);

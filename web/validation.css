@@ -3,7 +3,15 @@
 }
 
 .validation-warning {
-  background-color: yellow;
+  background-color: #E46C09;
+}
+
+.validation-error, .validation-warning {
+  position: absolute;
+  margin: -1px;
+  padding: 1px;
+  border-radius: 4px;
+  z-index: -1;
 }
 
 .snippet-hidden {

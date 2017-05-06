@@ -63,7 +63,7 @@ function getMCEndPoint(node, offset) {
       mcid:parseInt(mcid[1]), offset: offset};
   }
 }
-function getMCRange() {
+function getMCRange(wantCollapsed) {
   var sel = getSelection();
   if (!sel.rangeCount) {
     return;
@@ -81,6 +81,11 @@ function getMCRange() {
     if (!range.end) {
       console.error('Failed to obtain range endposition');
       return;
+    }
+  } else if(wantCollapsed){
+    point = getMCEndPoint(domrange.startContainer, domrange.startOffset);
+    if(point){
+      range = {start: point, end: point};
     }
   }
   return range;

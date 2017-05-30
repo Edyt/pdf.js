@@ -199,6 +199,7 @@ var Catalog = (function CatalogClosure() {
       });
       queue.reverse();
       var element, item, grandchildren, grandchild;
+      var figparent;
       while(queue.length){
         item = queue.pop();
         var tobj = this.xref.fetchIfRef(item.obj);
@@ -206,8 +207,25 @@ var Catalog = (function CatalogClosure() {
         if (!element) {
           continue;
         }
-        if(element.children){
-          grandchildren = element.children;
+
+        //figure does not have a page associated in the pdf object, instead use
+        //the first child with a valid page value
+        if (item.figparent && item.figparent.page === undefined) {
+          if (element.page !== undefined){
+            item.figparent.page = element.page;
+          }
+        }
+
+        if (element.name === 'Figure' && element.page === undefined) {
+          figparent = element;
+        } else if (item.figparent && item.figparent.page === undefined) {
+          figparent = item.figparent;
+        } else {
+          figparent = null;
+        }
+
+        grandchildren = element.children;
+        if (grandchildren){
           //has more nested structure elements
           while (grandchildren.length) {
             grandchild = grandchildren.pop();
@@ -218,7 +236,7 @@ var Catalog = (function CatalogClosure() {
                 processed.put(grandchild);
               }
             }
-            queue.push({obj:grandchild, parent: element});
+            queue.push({obj:grandchild, parent: element, figparent: figparent});
           }
         }
         item.parent.children.push(element);

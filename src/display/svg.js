@@ -27,6 +27,167 @@
   }
 }(this, function (exports, sharedUtil) {
 
+var NaN = Number.NaN;
+function BoundingBox(x1, y1, x2, y2) {
+  this.x1 = NaN;
+  this.y1 = NaN;
+  this.x2 = NaN;
+  this.y2 = NaN;
+
+  this.addPoint(x1, y1);
+  this.addPoint(x2, y2);
+}
+
+BoundingBox.prototype = {
+
+  width: function () {
+    return this.x2 - this.x1 || 0;
+  },
+
+  height: function () {
+    return this.y2 - this.y1 || 0;
+  },
+  
+  addPoint: function (x, y) {
+    if (!isNaN(x)) {
+      if (isNaN(this.x1) || isNaN(this.x2)) {
+        this.x1 = this.x2 = x;
+      }
+      if (x < this.x1) this.x1 = x;
+      else if (x > this.x2) this.x2 = x;
+    }
+
+    if (!isNaN(y)) {
+      if (isNaN(this.y1) || isNaN(this.y2)) {
+        this.y1 = this.y2 = y;
+      }
+      if (y < this.y1) this.y1 = y;
+      else if (y > this.y2) this.y2 = y;
+    }
+  },
+
+  addX: function (x) {
+    this.addPoint(x);
+  },
+
+  addY: function (y) {
+    this.addPoint(NaN, y);
+  },
+
+  addRect: function(x1, y1, x2, y2) {
+    this.addPoint(x1, y1);
+    this.addPoint(x1, y2);
+    this.addPoint(x2, y1);
+    this.addPoint(x2, y2);
+  },
+
+  addQuadraticCurve: function (p0x, p0y, p1x, p1y, p2x, p2y) {
+    var cp1x = p0x + 2 / 3 * (p1x - p0x); // CP1 = QP0 + 2/3 *(QP1-QP0)
+    var cp1y = p0y + 2 / 3 * (p1y - p0y); // CP1 = QP0 + 2/3 *(QP1-QP0)
+    var cp2x = cp1x + 1 / 3 * (p2x - p0x); // CP2 = CP1 + 1/3 *(QP2-QP0)
+    var cp2y = cp1y + 1 / 3 * (p2y - p0y); // CP2 = CP1 + 1/3 *(QP2-QP0)
+    this.addBezierCurve(p0x, p0y, cp1x, cp1y, cp2x, cp2y, p2x, p2y);
+  },
+
+  addBezierCurve: function (p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y) {
+    // from http://blog.hackers-cafe.net/2009/06/how-to-calculate-bezier-curves-bounding.html
+    var
+      i,
+      p0 = [p0x, p0y],
+      p1 = [p1x, p1y],
+      p2 = [p2x, p2y],
+      p3 = [p3x, p3y];
+
+    this.addPoint(p0[0], p0[1]);
+    this.addPoint(p3[0], p3[1]);
+
+    for (i = 0; i <= 1; i++) {
+      var f = function (t) {
+        return Math.pow(1 - t, 3) * p0[i]
+          + 3 * Math.pow(1 - t, 2) * t * p1[i]
+          + 3 * (1 - t) * Math.pow(t, 2) * p2[i]
+          + Math.pow(t, 3) * p3[i];
+      };
+
+      var b = 6 * p0[i] - 12 * p1[i] + 6 * p2[i];
+      var a = -3 * p0[i] + 9 * p1[i] - 9 * p2[i] + 3 * p3[i];
+      var c = 3 * p1[i] - 3 * p0[i];
+
+      if (a == 0) {
+        if (b == 0) continue;
+        var t = -c / b;
+        if (0 < t && t < 1) {
+          if (i == 0) this.addX(f(t));
+          if (i == 1) this.addY(f(t));
+        }
+        continue;
+      }
+
+      var b2ac = Math.pow(b, 2) - 4 * c * a;
+      if (b2ac < 0) continue;
+      var t1 = (-b + Math.sqrt(b2ac)) / (2 * a);
+      if (0 < t1 && t1 < 1) {
+        if (i == 0) this.addX(f(t1));
+        if (i == 1) this.addY(f(t1));
+      }
+      var t2 = (-b - Math.sqrt(b2ac)) / (2 * a);
+      if (0 < t2 && t2 < 1) {
+        if (i == 0) this.addX(f(t2));
+        if (i == 1) this.addY(f(t2));
+      }
+    }
+  }
+
+};
+
+var TransformedBoundingBox = function(){
+  this._ts = [];
+  this._t = null;
+};
+sharedUtil.Util.inherit(TransformedBoundingBox, BoundingBox, {
+  clone: function() {
+    var n = Object.create(this);
+    n._ts = n._ts.slice(0);
+    return n;
+  },
+  addBB: function(bb) {
+    var _t = this._t;
+    this._t = null;
+    try{
+      this.addRect(bb.x1, bb.y1, bb.x2, bb.y2);
+    }finally{
+      this._t = _t;
+    }
+  },
+  pushTransform: function(t){
+    this._ts.push([t, this._t]);
+    if(this._t){
+      this._t = sharedUtil.Util.transform(this._t, t);
+    } else {
+      this._t = t;
+    }
+  },
+  popTransform: function(){
+    if(this._t){
+      var pop = this._ts.pop();
+      this._t = pop[1];
+      return pop[0];
+    }
+  },
+  addPoint: function(x, y){
+    if (this._t) {
+      var tf = sharedUtil.Util.applyTransform([x||0, y||0], this._t);
+      if(!isNaN(x)){
+        x = tf[0];
+      }
+      if(!isNaN(y)){
+        y = tf[1];
+      }
+    }
+    return BoundingBox.prototype.addPoint.apply(this, [x, y]);
+  }
+});
+
 var FONT_IDENTITY_MATRIX = sharedUtil.FONT_IDENTITY_MATRIX;
 var IDENTITY_MATRIX = sharedUtil.IDENTITY_MATRIX;
 var ImageKind = sharedUtil.ImageKind;
@@ -375,7 +536,7 @@ var SVGGraphics = (function SVGGraphicsClosure() {
       pf(m[3]) + ' ' + pf(m[4]) + ' ' + pf(m[5]) + ')';
   }
 
-  function SVGGraphics(commonObjs, objs) {
+  function SVGGraphics(commonObjs, objs, pageIndex) {
     this.current = new SVGExtraState();
     this.transformMatrix = IDENTITY_MATRIX; // Graphics state matrix
     this.transformStack = [];
@@ -387,6 +548,8 @@ var SVGGraphics = (function SVGGraphicsClosure() {
     this.embedFonts = false;
     this.embeddedFonts = Object.create(null);
     this.cssStyle = null;
+    this._images = {};
+    this.pageIndex = pageIndex;
   }
 
   var NS = 'http://www.w3.org/2000/svg';
@@ -406,10 +569,26 @@ var SVGGraphics = (function SVGGraphicsClosure() {
     },
 
     restore: function SVGGraphics_restore() {
+      var current = this.current, ele = current.element;
+      /*if (current.element && current.element.nodeName==='svg:path'){
+        var path = ele;
+        if (!path.hasAttribute('stroke') && ((path.getAttribute('fill') || 'none') === 'none')){
+          var p = path.parentNode;
+          if(p){
+            p.removeChild(path);
+            ele = p;
+          }
+        }
+      }
+      if(ele && ele.nodeName === 'svg:g' && !ele.childNodes.length){
+        ele.parentNode.removeChild(ele);
+      }*/
       this.transformMatrix = this.transformStack.pop();
       this.current = this.extraStack.pop();
 
-      this.tgrp = document.createElementNS(NS, 'svg:g');
+      if(this.tgrp.childNodes.length || this.tgrp.parentNode !== this.pgrp) {
+        this.tgrp = document.createElementNS(NS, 'svg:g');
+      }
       this.tgrp.setAttributeNS(null, 'transform', pm(this.transformMatrix));
       this.pgrp.appendChild(this.tgrp);
     },
@@ -474,7 +653,8 @@ var SVGGraphics = (function SVGGraphicsClosure() {
         this.svg.appendChild(this.pgrp);
         var opTree = this.convertOpList(operatorList);
         this.executeOpTree(opTree);
-        return this.svg;
+        return this._images;
+        //return this.svg;
       }.bind(this));
     },
 
@@ -489,7 +669,15 @@ var SVGGraphics = (function SVGGraphicsClosure() {
         REVOPS[OPS[op]] = op;
       }
 
-      for (var x = 0; x < fnArrayLen; x++) {
+      var x = 0;
+      if (fnArray[fnArray.length-1] === 200) {
+        fnArrayLen--;
+        this.allStructs = argsArray[argsArray.length-1][0];
+        //var m = {};
+        //Object.values(this.allStructs).forEach(function(struct){m[struct.S]= (m[struct.S] || 0)+1});
+        //console.log(m);
+      }
+      for (; x < fnArrayLen; x++) {
         var fnId = fnArray[x];
         opList.push({'fnId' : fnId, 'fn': REVOPS[fnId], 'args': argsArray[x]});
       }
@@ -636,6 +824,53 @@ var SVGGraphics = (function SVGGraphicsClosure() {
           case 92:
             this.group(opTree[x].items);
             break;
+          case OPS.beginMarkedContentProps:
+            if(args && args.length && this.allStructs){
+              var o = args[0];
+              if(o.MCID !== this.MCID){
+                this.MCID = o.MCID;
+                this.MCIDoffset = 0;
+              }
+              if(o.MCID !== undefined){
+                var p = o;
+                while(p){
+                  if(p.S === "Figure"){
+                    this._pgrp = this.pgrp;
+                    this.pgrp = document.createElementNS(NS, 'svg:g'); // Parent group
+                    this.pgrp.setAttribute("figure", p.id);
+                    this._pgrp.appendChild(this.pgrp);
+                    var bb = new TransformedBoundingBox();
+                    bb.pushTransform(this.viewport.transform);
+                    //if(p.id === '1281R')debugger
+                    this.infigure = {id: p.id, bb: bb};
+                    break;
+                  }
+                  p = this.allStructs[p.parentid];
+                }
+              //console.log(args);
+              }
+            }
+            break;
+          case OPS.endMarkedContent:
+            this.MCID = undefined;
+            if(this._pgrp){
+              var newele = this.pgrp;
+              this.pgrp = this._pgrp;
+              this._pgrp = null;
+              var bb = this.infigure.bb;
+              //console.log("................", bb.x1, bb.y1, bb.width(), bb.height());;
+              var svg = this._getImage(newele, bb);
+              if(svg){
+                this._images[this.infigure.id] = svg;
+              }
+            }
+            this.infigure = null;
+            break;
+          case OPS.beginMarkedContent:
+            break;
+          case OPS.dependency:
+            //already handled by the loadDependencies
+            break;
           default:
             warn('Unimplemented method '+ fn);
             break;
@@ -702,7 +937,7 @@ var SVGGraphics = (function SVGGraphicsClosure() {
       var font = current.font;
       var fontSize = current.fontSize;
 
-      if (fontSize === 0) {
+      if (fontSize === 0 || !this.infigure) {
         return;
       }
 
@@ -756,6 +991,14 @@ var SVGGraphics = (function SVGGraphicsClosure() {
         current.tspan.setAttributeNS(null, 'fill', current.fillColor);
       }
 
+      if (this.MCID !== undefined) {
+        current.tspan.setAttribute('mcid', this.pageIndex + '/' + this.MCID);
+        if (this.MCIDoffset) {
+          current.tspan.setAttribute('startoffset', this.MCIDoffset);
+        }
+        this.MCIDoffset += glyphsLength;
+      }
+
       current.txtElement.setAttributeNS(null, 'transform',
                                         pm(current.textMatrix) +
                                         ' scale(1, -1)' );
@@ -765,6 +1008,16 @@ var SVGGraphics = (function SVGGraphicsClosure() {
 
       this.tgrp.appendChild(current.txtElement);
 
+      var bb = this.infigure && this.infigure.bb;
+      if(bb){
+        bb.pushTransform(this.transformMatrix);
+        bb.pushTransform(current.textMatrix);
+        bb.pushTransform([1, 0, 0, -1, 0, 0]);
+        bb.addRect(0, -current.y, x, -current.y-current.fontSize);
+        bb.popTransform();
+        bb.popTransform();
+        bb.popTransform();
+      }
     },
 
     setLeadingMoveText: function SVGGraphics_setLeadingMoveText(x, y) {
@@ -865,6 +1118,12 @@ var SVGGraphics = (function SVGGraphicsClosure() {
       current.path = document.createElementNS(NS, 'svg:path');
       var d = [];
       var opLength = ops.length;
+      var bb = this.infigure && this.infigure.bb;
+      if(bb) {
+        bb = bb.clone();
+        current.bb = bb;
+        bb.pushTransform(this.transformMatrix);
+      }
 
       for (var i = 0, j = 0; i < opLength; i++) {
         switch (ops[i] | 0) {
@@ -877,29 +1136,44 @@ var SVGGraphics = (function SVGGraphicsClosure() {
             var yh = y + height;
             d.push('M', pf(x), pf(y), 'L', pf(xw) , pf(y), 'L', pf(xw), pf(yh),
                    'L', pf(x), pf(yh), 'Z');
+            if (bb){
+              bb.addRect(x, y, xw, yh);
+            }
             break;
           case OPS.moveTo:
             x = args[j++];
             y = args[j++];
             d.push('M', pf(x), pf(y));
+            if (bb) {
+              bb.addPoint(x, y);
+            }
             break;
           case OPS.lineTo:
             x = args[j++];
             y = args[j++];
             d.push('L', pf(x) , pf(y));
+            if (bb) {
+              bb.addPoint(x, y);
+            }
             break;
           case OPS.curveTo:
             x = args[j + 4];
             y = args[j + 5];
             d.push('C', pf(args[j]), pf(args[j + 1]), pf(args[j + 2]),
                    pf(args[j + 3]), pf(x), pf(y));
+            if (bb) {
+              bb.addBezierCurve(x, y, args[j], args[j + 1], args[j + 2], args[j + 3], x, y);
+            }
             j += 6;
             break;
           case OPS.curveTo2:
             x = args[j + 2];
             y = args[j + 3];
             d.push('C', pf(x), pf(y), pf(args[j]), pf(args[j + 1]),
-                   pf(args[j + 2]), pf(args[j + 3]));
+                   pf(x), pf(y));
+            if (bb) {
+              bb.addBezierCurve(x, y, x, y, args[j], args[j + 1], x, y);
+            }
             j += 4;
             break;
           case OPS.curveTo3:
@@ -907,12 +1181,18 @@ var SVGGraphics = (function SVGGraphicsClosure() {
             y = args[j + 3];
             d.push('C', pf(args[j]), pf(args[j + 1]), pf(x), pf(y),
                    pf(x), pf(y));
+            if (bb) {
+              bb.addBezierCurve(x, y, args[j], args[j + 1], x, y, x, y);
+            }
             j += 4;
             break;
           case OPS.closePath:
             d.push('Z');
             break;
         }
+      }
+      if(bb) {
+        bb.popTransform();
       }
       current.path.setAttributeNS(null, 'd', d.join(' '));
       current.path.setAttributeNS(null, 'stroke-miterlimit',
@@ -1037,21 +1317,32 @@ var SVGGraphics = (function SVGGraphicsClosure() {
       }
     },
 
+    _updateBoundingBox: function(){
+      var current = this.current;
+      if (current.bb && this.infigure && this.infigure.bb) {
+        this.infigure.bb.addBB(current.bb);
+        delete current.bb;
+      }
+    },
+
     fill: function SVGGraphics_fill() {
       var current = this.current;
       current.element.setAttributeNS(null, 'fill', current.fillColor);
+      this._updateBoundingBox();
     },
 
     stroke: function SVGGraphics_stroke() {
       var current = this.current;
       current.element.setAttributeNS(null, 'stroke', current.strokeColor);
       current.element.setAttributeNS(null, 'fill', 'none');
+      this._updateBoundingBox();
     },
 
     eoFill: function SVGGraphics_eoFill() {
       var current = this.current;
       current.element.setAttributeNS(null, 'fill', current.fillColor);
       current.element.setAttributeNS(null, 'fill-rule', 'evenodd');
+      this._updateBoundingBox();
     },
 
     fillStroke: function SVGGraphics_fillStroke() {
@@ -1141,6 +1432,15 @@ var SVGGraphics = (function SVGGraphicsClosure() {
       imgEl.setAttributeNS(null, 'transform',
                            'scale(' + pf(1 / width) + ' ' +
                            pf(-1 / height) + ')');
+
+      var bb = this.infigure && this.infigure.bb;
+      if (bb){
+        bb.pushTransform(this.transformMatrix);
+        bb.addRect(0, 0, 1, 1);
+        bb.popTransform();
+      }
+      //this._getImage(imgEl, mask);
+
       if (mask) {
         mask.appendChild(imgEl);
       } else {
@@ -1152,6 +1452,45 @@ var SVGGraphics = (function SVGGraphicsClosure() {
       } else {
         this.pgrp.appendChild(this.tgrp);
       }
+    },
+
+    _getImage: function(ele, boundingbox) {
+      var rect = {width: boundingbox.width(), height: boundingbox.height(),
+        top: boundingbox.y1, left: boundingbox.x1};
+      if(rect.width * rect.height === 0){
+        return;
+      }
+
+      var groups = ele.querySelectorAll('g'), group;
+      groups = [].slice.apply(groups);
+      while(group = groups.pop()){
+        if(!group.childNodes.length){
+          group.parentNode.removeChild(group);
+        }
+      }
+
+      //ele = ele.cloneNode(true);
+      var matrix = this.viewport.transform;
+      var newroot = createScratchSVG(rect.width, rect.height);//this.svg.cloneNode(false);
+      if(ele.nodeName === "svg:image"){
+        ele.setAttribute("x", 0);
+        ele.setAttribute("y", 0);
+        matrix = PDFJS.Util.transform(matrix, this.transformMatrix);
+        matrix[4] = matrix[5] = 0;
+      } else {
+        //offset the root element to remove paddings
+        matrix - matrix.slice();
+        //matrix[4] = matrix[5] = 0;
+        //var newmatrix = PDFJS.Util.transform(matrix, this.transformMatrix);
+        //matrix[4] = -newmatrix[4];
+        //matrix[5] = -newmatrix[5];
+        matrix[4] -= rect.left;
+        matrix[5] -= rect.top;
+      }
+      newroot.setAttribute('transform', pm(matrix));
+      newroot.appendChild(ele);
+      document.body.appendChild(newroot);
+      return newroot;
     },
 
     paintImageMaskXObject:

@@ -19,7 +19,7 @@
   if (typeof define === 'function' && define.amd) {
     define('pdfjs/main_loader', ['exports', 'pdfjs/display/api',
       'pdfjs/display/annotation_layer', 'pdfjs/display/text_layer',
-      'pdfjs/display/dom_utils', 'pdfjs/shared/util', 'pdfjs/shared/global'],
+      'pdfjs/display/dom_utils', 'pdfjs/shared/util', 'pdfjs/shared/global', 'pdfjs/display/svg'],
       factory);
   } else if (typeof exports !== 'undefined') {
     factory(exports, require('./display/api.js'),

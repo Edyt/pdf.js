@@ -1034,7 +1034,7 @@ var PDFPageProxy = (function PDFPageProxyClosure() {
      * @return {Promise} A promise resolved with an {@link PDFOperatorList}
      * object that represents page's operator list.
      */
-    getOperatorList: function PDFPageProxy_getOperatorList() {
+    getOperatorList: function PDFPageProxy_getOperatorList(structure) {
       function operatorListChanged() {
         if (intentState.operatorList.lastChunk) {
           intentState.opListReadCapability.resolve(intentState.operatorList);
@@ -1068,6 +1068,7 @@ var PDFPageProxy = (function PDFPageProxyClosure() {
 
         this.transport.messageHandler.send('RenderPageRequest', {
           pageIndex: this.pageIndex,
+          structure: structure ? true : false,
           intent: renderingIntent
         });
       }

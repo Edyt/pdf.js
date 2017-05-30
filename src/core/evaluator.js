@@ -742,7 +742,8 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                                                                task,
                                                                resources,
                                                                operatorList,
-                                                               initialState) {
+                                                               initialState,
+                                                               structParents) {
 
       var self = this;
       var xref = this.xref;
@@ -756,6 +757,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
       var stateManager = new StateManager(initialState || new EvalState());
       var preprocessor = new EvaluatorPreprocessor(stream, xref, stateManager);
       var timeSlotManager = new TimeSlotManager();
+      var allStructs = structParents && {};
 
       return new Promise(function next(resolve, reject) {
         task.ensureNotTerminated();
@@ -992,11 +994,60 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
             case OPS.rectangle:
               self.buildPath(operatorList, fn, args);
               continue;
+            // marked content
+            case OPS.beginMarkedContent:
+              if (structParents && args[0] && args[0].name !== 'Artifact') {
+                console.warn('evaluator.getTextContent: '+
+                             'encountered non artifact beginMarkedContent',
+                             args[0].name);
+              }
+              if (!structParents) {
+                continue;
+              }
+              args = [{type: args[0].name}]
+              break;
+            case OPS.beginMarkedContentProps:
+              if (!structParents) {
+                continue;
+              }
+              var mcid = args[1].map.MCID;
+              //Apple Pages app may generate beginmarked without MCID,
+              //just ignore these
+              if(mcid === undefined){
+                args = [{type: args[0].name}];
+                break;
+              }
+              var parent = structParents[mcid];
+              args = [{
+                type: args[0].name, MCID: mcid, parentid: parent.objId
+              }];
+              while (parent && !(parent.objId in allStructs)) {
+                var grandparent = parent.get('P');
+                if (!grandparent) {
+                  //reached StructTreeRoot
+                  break;
+                }
+                allStructs[parent.objId] = {
+                  S: parent.get('S').name,
+                  id: parent.objId,
+                  parentid: grandparent.objId
+                  //TODO: add Attributes(A) and children(K)
+                  //is K needed?
+                };
+
+                parent = grandparent;
+              }
+              break;
+            case OPS.endMarkedContent:
+              if (!structParents) {
+                continue;
+              }
+              break;
             case OPS.markPoint:
             case OPS.markPointProps:
-            case OPS.beginMarkedContent:
-            case OPS.beginMarkedContentProps:
-            case OPS.endMarkedContent:
+            //case OPS.beginMarkedContent:
+            //case OPS.beginMarkedContentProps:
+            //case OPS.endMarkedContent:
             case OPS.beginCompat:
             case OPS.endCompat:
               // Ignore operators where the corresponding handlers are known to
@@ -1034,6 +1085,10 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
         // Closing those for them.
         for (i = 0, ii = preprocessor.savedStatesDepth; i < ii; i++) {
           operatorList.addOp(OPS.restore, []);
+        }
+
+        if (allStructs) {
+          operatorList.addOp(200, [allStructs]);
         }
         resolve();
       });

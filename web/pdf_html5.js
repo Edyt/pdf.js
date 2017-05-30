@@ -135,6 +135,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
     }*/
   }
 
+  var IMAGE_SCALE = 1.5;
   PDFHTML5Controller.prototype = {
     extractText: function PDFHTML5Controller_extractText() {
       if (this.startedTextExtraction) {
@@ -183,6 +184,9 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                 var top = document.createElement('div');
                 var queue = children.slice(0);
                 var elements = {}, parent, current, seqs, elementname, elem;
+                var promise = Promise.resolve();
+                var svgFigures = {};
+                var svgPages = {};
                 while(queue.length){
                   current = queue.pop();
                   parent = elements[current.parentpdfid] || top;
@@ -200,8 +204,34 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                     if (elementname === 'a' && current.uri) {
                       elem.setAttribute('href', current.uri);
                     }
-
-                    if (current.children) {
+                    if (elementname === 'Figure') {
+                      svgFigures[current.pdfid] = elem;
+                      if(!svgPages[current.page]){
+                        svgPages[current.page] = 1;
+                        promise = promise.then((function(pageindex){
+                            return function(){
+                              return self.pdfViewer.pdfDocument.getPage(pageindex + 1);
+                            };
+                        })(current.page)).then(function (page) {
+                            var viewport = page.getViewport(IMAGE_SCALE);
+                            return page.getOperatorList(true).then(function (opList) {
+                              var svgGfx = new PDFJS.SVGGraphics(page.commonObjs, page.objs, page.pageIndex);
+                              return svgGfx.getSVG(opList, viewport);
+                            });
+                        }).then(function (images) {
+                          var pdfid;
+                          var fig, parent;
+                          for(pdfid in images){
+                            if(fig = svgFigures[pdfid]){
+                              parent = fig.parentNode;
+                              parent.replaceChild(images[pdfid], fig);
+                            } else {
+                              console.warn("missing figure in generated output", pdfid);
+                            }
+                          }
+                        });
+                      }
+                    } else if (current.children) {
                       queue = queue.concat(current.children);
                     }
                   } else if (current.type === 'MCR') {
@@ -216,8 +246,10 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                     }
                   }
                 }
-                self._resolve(top.innerHTML);
-                self.startedTextExtraction = false;
+                promise.then(function(){
+                  self._resolve(top.innerHTML);
+                  self.startedTextExtraction = false;
+                });
               });
             }
           }

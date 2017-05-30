@@ -203,7 +203,7 @@ var Page = (function PageClosure() {
       }.bind(this));
     },
 
-    getOperatorList: function Page_getOperatorList(handler, task, intent) {
+    getOperatorList: function Page_getOperatorList(handler, task, intent, structure) {
       var self = this;
 
       var pdfManager = this.pdfManager;
@@ -228,6 +228,17 @@ var Page = (function PageClosure() {
 
       var dataPromises = Promise.all([contentStreamPromise, resourcesPromise]);
       var pageListPromise = dataPromises.then(function(data) {
+        var structParents = structure && self.pageDict.get('StructParents');
+        var structTree = pdfManager.pdfDocument.catalog.documentStructTree;
+
+        if (structure && !isNaN(structParents) && structTree) {
+          structParents = structTree.ParentTree[structParents];
+          var xref = self.xref;
+          structParents = structParents.map(function(p){return xref.fetch(p);});
+        } else {
+          structParents = null;
+        }
+
         var contentStream = data[0];
         var opList = new OperatorList(intent, handler, self.pageIndex);
 
@@ -237,7 +248,7 @@ var Page = (function PageClosure() {
           intent: intent
         });
         return partialEvaluator.getOperatorList(contentStream, task,
-          self.resources, opList).then(function () {
+          self.resources, opList, null, structParents).then(function () {
             return opList;
           });
       });

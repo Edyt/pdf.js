@@ -677,9 +677,22 @@ var SVGGraphics = (function SVGGraphicsClosure() {
         //Object.values(this.allStructs).forEach(function(struct){m[struct.S]= (m[struct.S] || 0)+1});
         //console.log(m);
       }
+
+      var lastFnId, args;
       for (; x < fnArrayLen; x++) {
         var fnId = fnArray[x];
+        //merge consecutive constructPath operators together as the
+        //constructPath function in this svg renderer can not work with
+        //separated one (unlike the canvas renderer). This can happen when
+        //worker sent chunked operators
+        if(lastFnId === fnId && fnId === OPS.constructPath) {
+          args = opList[opList.length-1].args;
+          args[0].push(argsArray[x][0]);
+          [].push.apply(args[1], argsArray[x][1]);
+          continue;
+        }
         opList.push({'fnId' : fnId, 'fn': REVOPS[fnId], 'args': argsArray[x]});
+        lastFnId = fnId;
       }
       return opListToTree(opList);
     },
@@ -841,7 +854,6 @@ var SVGGraphics = (function SVGGraphicsClosure() {
                     this._pgrp.appendChild(this.pgrp);
                     var bb = new TransformedBoundingBox();
                     bb.pushTransform(this.viewport.transform);
-                    //if(p.id === '1281R')debugger
                     this.infigure = {id: p.id, bb: bb};
                     break;
                   }
@@ -1120,8 +1132,6 @@ var SVGGraphics = (function SVGGraphicsClosure() {
       var opLength = ops.length;
       var bb = this.infigure && this.infigure.bb;
       if(bb) {
-        bb = bb.clone();
-        current.bb = bb;
         bb.pushTransform(this.transformMatrix);
       }
 
@@ -1317,32 +1327,21 @@ var SVGGraphics = (function SVGGraphicsClosure() {
       }
     },
 
-    _updateBoundingBox: function(){
-      var current = this.current;
-      if (current.bb && this.infigure && this.infigure.bb) {
-        this.infigure.bb.addBB(current.bb);
-        delete current.bb;
-      }
-    },
-
     fill: function SVGGraphics_fill() {
       var current = this.current;
       current.element.setAttributeNS(null, 'fill', current.fillColor);
-      this._updateBoundingBox();
     },
 
     stroke: function SVGGraphics_stroke() {
       var current = this.current;
       current.element.setAttributeNS(null, 'stroke', current.strokeColor);
       current.element.setAttributeNS(null, 'fill', 'none');
-      this._updateBoundingBox();
     },
 
     eoFill: function SVGGraphics_eoFill() {
       var current = this.current;
       current.element.setAttributeNS(null, 'fill', current.fillColor);
       current.element.setAttributeNS(null, 'fill-rule', 'evenodd');
-      this._updateBoundingBox();
     },
 
     fillStroke: function SVGGraphics_fillStroke() {

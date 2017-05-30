@@ -580,6 +580,10 @@ var SVGGraphics = (function SVGGraphicsClosure() {
           case OPS.eoFillStroke:
             this.eoFillStroke();
             break;
+          case OPS.closeEOFillStroke:
+            this.closePath();
+            this.eoFillStroke();
+            break;
           case OPS.clip:
             this.clip('nonzero');
             break;

@@ -584,6 +584,7 @@ var PDFImage = (function PDFImageClosure() {
             newArray.set(imgArray);
             imgData.data = newArray;
           }
+          imgData.needsDecode = this.needsDecode;
           if (this.needsDecode) {
             // Invert the buffer (which must be grayscale if we reached here).
             assert(kind === ImageKind.GRAYSCALE_1BPP);

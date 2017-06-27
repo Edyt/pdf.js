@@ -307,7 +307,7 @@ var convertImgDataToPng = (function convertImgDataToPngClosure() {
       offsetLiterals += lineSize;
     }
 
-    if (kind === ImageKind.GRAYSCALE_1BPP) {
+    if (kind === ImageKind.GRAYSCALE_1BPP && imgData.needsDecode) {
       // inverting for B/W
       offsetLiterals = 0;
       for (y = 0; y < height; y++) {

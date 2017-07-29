@@ -88,6 +88,12 @@ AnnotationElementFactory.prototype =
       case AnnotationType.FILEATTACHMENT:
         return new FileAttachmentAnnotationElement(parameters);
 
+      case AnnotationType.CARET:
+        return new CaretAnnotationElement(parameters);
+
+      case AnnotationType.FREETEXT:
+        return new FreeTextAnnotationElement(parameters);
+
       default:
         return new AnnotationElement(parameters);
     }
@@ -830,6 +836,31 @@ var FileAttachmentAnnotationElement = (
 
   return FileAttachmentAnnotationElement;
 })();
+
+function createAnnotationElement(classname) {
+  function OneAnnotationElement(parameters) {
+    var isRenderable = !!(parameters.data.hasPopup ||
+                          parameters.data.title || parameters.data.contents);
+    AnnotationElement.call(this, parameters, isRenderable);
+  }
+
+  Util.inherit(OneAnnotationElement, AnnotationElement, {
+    render: function OneAnnotationElement_render() {
+      this.container.className = classname;
+
+      if (!this.data.hasPopup) {
+        this._createPopup(this.container, null, this.data);
+      }
+
+      return this.container;
+    }
+  });
+
+  return OneAnnotationElement;
+}
+
+var FreeTextAnnotationElement = createAnnotationElement('freeTextAnnotation');
+var CaretAnnotationElement = createAnnotationElement('caretAnnotation');
 
 /**
  * @typedef {Object} AnnotationLayerParameters

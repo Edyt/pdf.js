@@ -113,6 +113,12 @@ AnnotationFactory.prototype = /** @lends AnnotationFactory.prototype */ {
       case 'FileAttachment':
         return new FileAttachmentAnnotation(parameters);
 
+      case 'Caret':
+        return new CaretAnnotation(parameters);
+
+      case 'FreeText':
+        return new FreeTextAnnotation(parameters);
+
       default:
         warn('Unimplemented annotation type "' + subtype + '", ' +
              'falling back to base annotation');
@@ -882,6 +888,25 @@ var FileAttachmentAnnotation = (function FileAttachmentAnnotationClosure() {
 
   return FileAttachmentAnnotation;
 })();
+
+function createAnnotationType(typeToCreate) {
+  function AnnotationType(parameters) {
+    Annotation.call(this, parameters);
+
+    this.data.annotationType = typeToCreate;
+    this._preparePopup(parameters.dict);
+
+    // PDF viewers completely ignore any border styles.
+    this.data.borderStyle.setWidth(0);
+  }
+
+  Util.inherit(AnnotationType, Annotation, {});
+
+  return AnnotationType;
+}
+
+var CaretAnnotation = createAnnotationType(AnnotationType.CARET);
+var FreeTextAnnotation = createAnnotationType(AnnotationType.FREETEXT);
 
 exports.Annotation = Annotation;
 exports.AnnotationBorderStyle = AnnotationBorderStyle;

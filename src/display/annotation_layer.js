@@ -50,14 +50,56 @@ var CustomStyle = displayDOMUtils.CustomStyle;
  * @class
  * @alias AnnotationElementFactory
  */
-function AnnotationElementFactory() {}
+function AnnotationElementFactory() {
+  this._annots = {};
+  this._pendingGroup = {};
+  this._ignores ={};
+}
 AnnotationElementFactory.prototype =
     /** @lends AnnotationElementFactory.prototype */ {
+  addGroupAnnot: function(parentid, triggerElement) {
+    if (this._annots[parentid]) {
+      this._annots[parentid].addTrigger(triggerElement);
+    } else {
+      if (!this._pendingGroup[parentid]) {
+        this._pendingGroup[parentid] = [triggerElement];
+      } else {
+        this._pendingGroup[parentid].push(triggerElement);
+      }
+    }
+  },
+  onRenderedAnnot: function(annot) {
+    if (annot) {
+      var id = annot.data.id;
+      this._annots[id] = annot;
+      if (annot.data.parentId) {
+        id = annot.data.parentId;
+      } else {
+        if (!annot.popup) {
+          return;
+        }
+      }
+      var pending = this._pendingGroup[id];
+      if (pending) {
+        delete this._pendingGroup[id];
+        pending.forEach(function(triggerElement){
+          annot.addTrigger(triggerElement);
+        });
+      }
+    }
+  },
+  ignore: function(id) {
+    this._ignores[id] = 1;
+  },
   /**
    * @param {AnnotationElementParameters} parameters
    * @returns {AnnotationElement}
    */
   create: function AnnotationElementFactory_create(parameters) {
+    if (this._ignores[parameters.data.id]) {
+      return;
+    }
+
     var subtype = parameters.data.annotationType;
 
     switch (subtype) {
@@ -113,6 +155,13 @@ var AnnotationElement = (function AnnotationElementClosure() {
     this.viewport = parameters.viewport;
     this.linkService = parameters.linkService;
     this.downloadManager = parameters.downloadManager;
+    this.factory = parameters.factory;
+    
+    if (this.data.ignorePopup) {
+      this.factory.ignore(this.data.ignorePopup);
+    }
+
+    this.groupId = this.data.RT === 'Group' && this.data.IRT;
 
     if (isRenderable) {
       this.container = this._createContainer();
@@ -135,6 +184,9 @@ var AnnotationElement = (function AnnotationElementClosure() {
 
       container.setAttribute('data-annotation-id', data.id);
 
+      if (this.groupId) {
+        this.factory.addGroupAnnot(this.groupId, container);
+      }
       // Do *not* modify `data.rect`, since that will corrupt the annotation
       // position on subsequent calls to `_createContainer` (see issue 6804).
       var rect = Util.normalizeRect([
@@ -224,6 +276,10 @@ var AnnotationElement = (function AnnotationElementClosure() {
      */
     _createPopup:
         function AnnotationElement_createPopup(container, trigger, data) {
+      if (this.groupId) {
+        return;
+      }
+
       // If no trigger element is specified, create it.
       if (!trigger) {
         trigger = document.createElement('div');
@@ -240,12 +296,19 @@ var AnnotationElement = (function AnnotationElementClosure() {
         contents: data.contents,
         hideWrapper: true
       });
+      this.popup = popupElement;
       var popup = popupElement.render();
 
       // Position the popup next to the annotation's container.
       popup.style.left = container.style.width;
 
       container.appendChild(popup);
+    },
+
+    addTrigger: function(trigger) {
+      if (this.popup){
+        this.popup.addTrigger(trigger);
+      }
     },
 
     /**
@@ -483,7 +546,7 @@ var PopupAnnotationElement = (function PopupAnnotationElementClosure() {
         return this.container;
       }
 
-      var popup = new PopupElement({
+      var popup = this.popup = new PopupElement({
         container: this.container,
         trigger: parentElement,
         color: this.data.color,
@@ -562,15 +625,19 @@ var PopupElement = (function PopupElementClosure() {
       title.textContent = this.title;
 
       // Attach the event listeners to the trigger element.
-      this.trigger.addEventListener('click', this._toggle.bind(this));
-      this.trigger.addEventListener('mouseover', this._show.bind(this, false));
-      this.trigger.addEventListener('mouseout', this._hide.bind(this, false));
+      this.addTrigger(this.trigger);
       popup.addEventListener('click', this._hide.bind(this, true));
 
       popup.appendChild(title);
       popup.appendChild(contents);
       wrapper.appendChild(popup);
       return wrapper;
+    },
+
+    addTrigger: function(trigger) {
+      trigger.addEventListener('click', this._toggle.bind(this));
+      trigger.addEventListener('mouseover', this._show.bind(this, false));
+      trigger.addEventListener('mouseout', this._hide.bind(this, false));
     },
 
     /**
@@ -899,11 +966,13 @@ var AnnotationLayer = (function AnnotationLayerClosure() {
           page: parameters.page,
           viewport: parameters.viewport,
           linkService: parameters.linkService,
-          downloadManager: parameters.downloadManager
+          downloadManager: parameters.downloadManager,
+          factory: annotationElementFactory
         };
         var element = annotationElementFactory.create(properties);
-        if (element.isRenderable) {
+        if (element && element.isRenderable) {
           parameters.div.appendChild(element.render());
+          annotationElementFactory.onRenderedAnnot(element);
         }
       }
     },

@@ -191,6 +191,10 @@ var Annotation = (function AnnotationClosure() {
     this.data.color = this.color;
     this.data.borderStyle = this.borderStyle;
     this.data.hasAppearance = !!this.appearance;
+    if (dict.has('IRT')) {
+      this.data.IRT = dict.getRaw('IRT').toString();
+      this.data.RT = dict.has('RT') ? dict.get('RT').name : 'R';
+    }
   }
 
   Annotation.prototype = {
@@ -366,6 +370,10 @@ var Annotation = (function AnnotationClosure() {
       }
 
       this.data.hasPopup = dict.has('Popup');
+      //ignore popup if this annotation is in an annotation group
+      if(this.data.hasPopup && this.data.IRT && this.data.RT === 'Group') {
+        this.data.ignorePopup = dict.getRaw('Popup').toString();
+      }
       this.data.title = stringToPDFString(dict.get('T') || '');
       this.data.contents = stringToPDFString(dict.get('Contents') || '');
     },
@@ -895,9 +903,6 @@ function createAnnotationType(typeToCreate) {
 
     this.data.annotationType = typeToCreate;
     this._preparePopup(parameters.dict);
-
-    // PDF viewers completely ignore any border styles.
-    this.data.borderStyle.setWidth(0);
   }
 
   Util.inherit(AnnotationType, Annotation, {});

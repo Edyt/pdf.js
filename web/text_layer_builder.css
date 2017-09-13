@@ -40,7 +40,9 @@
   transform-origin: 0% 0%;
   font-weight: normal;
 }
-
+.sketchTarget .textLayer div[textLayerDiv], .sketchTarget.textLayer .alignedSelection {
+  cursor: inherit;
+}
 .textLayer .highlight, .textLayer .alignedSelection {
   margin: -1px;
   padding: 1px;

@@ -932,7 +932,9 @@ html[dir='rtl'] .toolbarButton.pageDown::before {
 }
 
 .toolbarButton.bookmark::before,
-.secondaryToolbarButton.bookmark::before {
+.secondaryToolbarButton.bookmark::before,
+.toolbarButton.sketch::before,
+.secondaryToolbarButton.sketch::before{
   content: url(images/toolbarButton-bookmark.png);
 }
 
@@ -1689,7 +1691,9 @@ html[dir='rtl'] #documentPropertiesOverlay .row > * {
   }
 
   .toolbarButton.bookmark::before,
-  .secondaryToolbarButton.bookmark::before {
+  .secondaryToolbarButton.bookmark::before,
+  .toolbarButton.sketch::before,
+  .secondaryToolbarButton.sketch::before{
     content: url(images/toolbarButton-bookmark@2x.png);
   }
 

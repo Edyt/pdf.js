@@ -615,7 +615,9 @@ function showReflow(showreflow){
   }
   PDFViewerApplication.pdfViewer.html5.handleEvent().then(function(html){
     if(!showreflow){
-      parent.onPDFHTML(html, window);
+      if(parent.onPDFHTML){
+        parent.onPDFHTML(html, window);
+      }
       return;
     }
     var htmlwin = iframe.contentWindow;

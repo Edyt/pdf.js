@@ -19,6 +19,12 @@
   overflow: hidden;
 }
 
+.pdfViewer.sketchTarget .page {
+  cursor: pointer !important;
+}
+.pdfViewer.sketchTarget .page.sketchInitializing {
+  cursor: wait !important;
+}
 .pdfViewer .page {
   direction: ltr;
   width: 816px;
@@ -30,6 +36,15 @@
   background-clip: content-box;
   border-image: url(images/shadow.png) 9 9 repeat;
   background-color: white;
+}
+
+.pdfViewer .page > svg, .pdfViewer .page > iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
 }
 
 .pdfViewer.removePageBorders .page {

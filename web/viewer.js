@@ -1513,8 +1513,160 @@ function webViewerInitialized() {
   document.getElementById('print').addEventListener('click',
     SecondaryToolbar.printClick.bind(SecondaryToolbar));
 
+  var inSketch = false;
+  function getEventPage(evt){
+    var root = PDFViewerApplication.pdfViewer.viewer;
+    var target = evt.target;
+    if(target !== root){
+      while(target.parentNode !== root){
+        target = target.parentNode;
+      }
+      var pn = target.dataset.pageNumber | 0;
+      if(!isNaN(pn)){
+        return PDFViewerApplication.pdfViewer.getPageView(pn - 1);
+      }
+    }
+  }
+  function setSketchContent(iframe){
+    var svgEditor = iframe.contentWindow.methodDraw;
+    if(PDFViewerApplication._sketchingPage){
+      var page = PDFViewerApplication._sketchingPage;
+      if (page && page._sketch) {
+        svgEditor.canvas.setSvgString(page._sketch);
+        svgEditor.updateCanvas(true);
+      }
+      if (page) {
+        page.div.classList.remove('sketchInitializing');
+      }
+      var svg = page.div.querySelector('svg');
+      if(svg){
+        svg.style.display = 'none';
+      }
+    }
+
+    svgEditor.parent = parentApi;
+  }
+  var parentApi = {
+    save: function() {
+      var iframe = PDFViewerApplication._sketchIframe;
+      var svgEditor =iframe.contentWindow.methodDraw;
+      var canvas = svgEditor.canvas;
+      var svgcontent = canvas.getContentElem();
+      var content = canvas.svgToString(svgcontent, 0);
+      var pn = iframe.parentNode.dataset.pageNumber;
+      pn = pn | 0;
+      var pv = PDFViewerApplication.pdfViewer.getPageView(pn - 1);
+      if (pv){
+        pv._sketch = content;
+        var svg = pv.div.querySelector('svg');
+        if (svg) {
+          pv.div.removeChild(svg);
+        }
+        pv.div.insertBefore(document.importNode(svgcontent, true),
+                            pv.div.firstChild);
+        console.log('saved content', pn, content);
+      }
+    },
+    hide: function() {
+      var iframe = PDFViewerApplication._sketchIframe;
+      var svg = iframe.parentNode.querySelector('svg');
+      if (svg) {
+        svg.style.display = '';
+      }
+      hideSketch();
+    },
+    newSketch: function() {
+      console.log('TODO: new sketch');
+    }
+  };
+  function openSketch(evt){
+    var pageview = getEventPage(evt);
+    if (!pageview){
+      return;
+    }
+    var iframe = PDFViewerApplication._sketchIframe;
+    var originallyHidden = true;
+    if (!iframe) {
+      iframe = PDFViewerApplication._sketchIframe =
+        document.createElement('iframe');
+      var viewport = pageview.viewport;
+      iframe.src = 'svg-edit/editor/svg-editor.html?dimensions=' +
+        Math.round(viewport.width) + ',' + Math.round(viewport.height);
+      iframe.setAttribute('allowTransparency', 'true');
+      //iframe.style.marginTop = '-2px';
+      //iframe.style.marginLeft = '-1px';
+    } else {
+      //iframe.style.zIndex = '';
+      originallyHidden = iframe.style.display === 'none';
+    }
+
+    iframe.style.visibility = 'hidden';
+    iframe.style.display = '';
+    var svgEditor = iframe.contentWindow && iframe.contentWindow.methodDraw;
+    PDFViewerApplication._sketchingPage = pageview;
+    if (!svgEditor) {
+      if(!iframe.onload) {
+        iframe.onload = function() {
+          iframe.style.visibility = '';
+          var svgEditor = iframe.contentWindow.methodDraw;
+          svgEditor.ready(function(){
+            setSketchContent(iframe);
+          });
+        };
+      }
+    } 
+    
+    if (!originallyHidden) {
+      //already opened on a page, save it
+      parentApi.save();
+    }
+    pageview.div.classList.add('sketchInitializing');
+    //hide the text layer otherwise it will be on top of the iframe
+    pageview.div.lastChild.style.display = 'none';
+    pageview.div.insertBefore(iframe, pageview.div.firstChild);
+    //firefox always destroys the content when insertBefore is called,
+    //while chrome doesn't, so in chrome we need to show the content here
+    if (iframe.contentWindow.document.body && iframe.contentWindow.methodDraw){
+      iframe.style.visibility = '';
+      setSketchContent(iframe);
+    }
+  }
+  function hideSketch() {
+    var iframe = PDFViewerApplication._sketchIframe;
+    if (!iframe) {
+      return;
+    }
+    if (iframe.parentNode) {
+      //clear out content
+      var svgEditor = iframe.contentWindow.methodDraw;
+      svgEditor.canvas.clear();
+      svgEditor.updateCanvas(true);
+
+      iframe.parentNode.lastChild.style.display = 'block';
+      iframe.style.display = 'none';
+    }
+  }
+
   document.getElementById('download').addEventListener('click',
-    SecondaryToolbar.downloadClick.bind(SecondaryToolbar));
+    function(){
+      SecondaryToolbar.downloadClick();
+    }
+  );
+
+  document.getElementById('sketchButton').addEventListener('click',
+    function(){
+      inSketch = !inSketch;
+      var viewer = PDFViewerApplication.pdfViewer.viewer;
+      if (inSketch) {
+        viewer.classList.add('sketchTarget');
+        viewer.addEventListener('mousedown', openSketch, false);
+      } else {
+        viewer.classList.remove('sketchTarget');
+        viewer.removeEventListener('mousedown', openSketch, false);
+        hideSketch();
+      }
+    }
+  );
 
 //#if (FIREFOX || MOZCENTRAL)
 //PDFViewerApplication.setTitleUsingUrl(file);

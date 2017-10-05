@@ -362,7 +362,6 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
           }
         }
         return p;
-        //if(!page.div || !page.div.parentNode)debugger
       }
       if(page.textLayer){// && !page.textLayer.renderingDone) {
         return page.textLayer.textLayerRenderTask.promise;

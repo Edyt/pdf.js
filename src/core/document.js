@@ -51,6 +51,7 @@ var Dict = corePrimitives.Dict;
 var isDict = corePrimitives.isDict;
 var isName = corePrimitives.isName;
 var isStream = corePrimitives.isStream;
+var isRef = corePrimitives.isRef;
 var NullStream = coreStream.NullStream;
 var Stream = coreStream.Stream;
 var StreamsSequenceStream = coreStream.StreamsSequenceStream;
@@ -234,7 +235,8 @@ var Page = (function PageClosure() {
         if (structure && !isNaN(structParents) && structTree) {
           structParents = structTree.ParentTree[structParents];
           var xref = self.xref;
-          structParents = structParents.map(function(p){return xref.fetch(p);});
+          structParents = structParents.map(function(p){return isRef(p) ?
+                                            xref.fetch(p) : p;});
         } else {
           structParents = null;
         }

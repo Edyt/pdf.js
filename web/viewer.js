@@ -1549,6 +1549,9 @@ function webViewerInitialized() {
   var parentApi = {
     save: function() {
       var iframe = PDFViewerApplication._sketchIframe;
+      if (!iframe.contentWindow){
+        return;
+      }
       var svgEditor =iframe.contentWindow.methodDraw;
       var canvas = svgEditor.canvas;
       var svgcontent = canvas.getContentElem();

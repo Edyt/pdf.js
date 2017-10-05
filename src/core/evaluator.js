@@ -996,9 +996,10 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               continue;
             // marked content
             case OPS.beginMarkedContent:
-              if (structParents && args[0] && args[0].name !== 'Artifact') {
+              if (structParents && args[0] && args[0].name !== 'Artifact' &&
+                  args[0].name.slice(0, 4) !== 'Clip') {
                 console.warn('evaluator.getTextContent: '+
-                             'encountered non artifact beginMarkedContent',
+                             'encountered non artifact/clip beginMarkedContent',
                              args[0].name);
               }
               if (!structParents) {
@@ -1108,7 +1109,8 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
         if (!isNaN(structParents) && structTree) {
           structParents = structTree.ParentTree[structParents];
           var xref = self.xref;
-          structParents = structParents.map(function(p){return xref.fetch(p);});
+          structParents = structParents.map(function(p){return isRef(p) ?
+                                            xref.fetch(p) : p;});
         } else {
           structParents = null;
         }
@@ -1624,9 +1626,10 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               break;
             // marked content
             case OPS.beginMarkedContent:
-              if (structParents && args[0] && args[0].name !== 'Artifact') {
+              if (structParents && args[0] && args[0].name !== 'Artifact' &&
+                  args[0].name.slice(0, 4) !== 'Clip') {
                 console.warn('evaluator.getTextContent: '+
-                             'encountered non artifact beginMarkedContent',
+                             'encountered non artifact/clip beginMarkedContent',
                              args[0].name);
               }
               break;

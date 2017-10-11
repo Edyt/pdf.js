@@ -1634,7 +1634,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               }
               break;
             case OPS.beginMarkedContentProps:
-              if (!structParents) {
+              if (!structParents || args[0] && args[0].name === 'Artifact') {
                 break;
               }
               var mcid = args[1].map.MCID;

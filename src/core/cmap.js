@@ -265,6 +265,12 @@ var CMap = (function CMapClosure() {
 
     // This is used for both bf and cid chars.
     mapOne: function(src, dst) {
+      if(src in this._map){
+        if(PDFJS.pdfBug && typeof StepperManager !== undefined) {
+          console.log('ignore cmap: src already exists', src, this._map[src]);
+        }
+        return;
+      }
       this._map[src] = dst;
     },
 

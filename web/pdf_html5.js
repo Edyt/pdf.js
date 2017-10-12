@@ -183,13 +183,14 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                 var children = structTree.children;
                 var top = document.createElement('div');
                 var queue = children.slice(0);
-                var elements = {}, parent, current, seqs, elementname, elem;
+                var elements = {}, parent, current, seqs, elementname, elem, pdfid;
                 var promise = Promise.resolve();
                 var svgFigures = {};
                 var svgPages = {};
                 while(queue.length){
                   current = queue.pop();
                   parent = elements[current.parentpdfid] || top;
+                  pdfid = current.pdfid;
                   if (current.type === 'StructElem' ){
                     elementname = roleMap[current.name] || current.name;
                     if (elementname === 'Link') {
@@ -197,15 +198,20 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                     } else if (elementname === 'Document') {
                       elementname = 'div';
                     }
-                    elements[current.pdfid] = elem =
+                    elements[pdfid] = elem =
                       parent.insertBefore(document.createElement(elementname),
                                         parent.firstChild);
-                    elem.setAttribute('pdfid', current.pdfid);
+
+                    //add non-versioned pdfid to the elements dict
+                    if (pdfid.charAt(pdfid.length - 1) !== 'R'){
+                      elements[pdfid.split('R')[0] + 'R'] = elem;
+                    }
+                    elem.setAttribute('pdfid', pdfid);
                     if (elementname === 'a' && current.uri) {
                       elem.setAttribute('href', current.uri);
                     }
                     if (elementname === 'Figure') {
-                      svgFigures[current.pdfid] = elem;
+                      svgFigures[pdfid] = elem;
                       if(!svgPages[current.page]){
                         svgPages[current.page] = 1;
                         promise = promise.then((function(pageindex){

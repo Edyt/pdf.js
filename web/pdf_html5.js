@@ -159,9 +159,9 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
               if (item && item.markedContent) {
                 mcid = item.markedContent.MCID;
                 if (!markedSeqs[mcid]) {
-                  markedSeqs[mcid] = item.str;
+                  markedSeqs[mcid] = {str: item.str, eolHyphen: item.eolHyphen};
                 } else {
-                  markedSeqs[mcid] += item.str;
+                  markedSeqs[mcid].str += item.str;
                 }
               }
             }
@@ -192,6 +192,15 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                   parent = elements[current.parentpdfid] || top;
                   pdfid = current.pdfid;
                   if (current.type === 'StructElem' ){
+                    children = current.children;
+                    if(children && children.length === 1 && children[0].type === 'MCR'){
+                      seqs = self.pageMarkedSequences[current.page];
+                      seqs = seqs && seqs[children[0].MCID];
+                      if(seqs && seqs.eolHyphen){
+                        continue;
+                      }
+                    }
+
                     elementname = roleMap[current.name] || current.name;
                     if (elementname === 'Link') {
                       elementname = 'a';
@@ -237,7 +246,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                           }
                         });
                       }
-                    } else if (current.children) {
+                    } else if (children) {
                       queue = queue.concat(current.children);
                     }
                   } else if (current.type === 'MCR') {
@@ -246,7 +255,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                     if (seqs && seqs[current.MCID]) {
                       elem = document.createElement('span');
                       elem.setAttribute('MCID', current.page + '/' + current.MCID);
-                      elem.appendChild(document.createTextNode(seqs[current.MCID]));
+                      elem.appendChild(document.createTextNode(seqs[current.MCID].str));
                       parent.insertBefore(elem,
                                           parent.firstChild);
                     }

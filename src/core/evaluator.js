@@ -1261,9 +1261,19 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
         return (i < ii ? str.replace(WhitespaceRegexp, ' ') : str);
       }
 
-      function runBidiTransform(textChunk) {
+      function runBidiTransform(textChunk, previous) {
         var str = textChunk.str.join('');
         var bidiResult = PDFJS.bidi(str, -1, textChunk.vertical);
+        //detecting line end hyphen
+        if (previous && previous.hyphenEnd && previous.markedContent) {
+          if (!textChunk.vertical) {
+            if(previous.transform[5] - previous.height > textChunk.transform[5]) {
+              if(previous.str.length === 1){
+                previous.eolHyphen = 1;
+              }
+            }
+          }
+        }
         return {
           str: (normalizeWhitespace ? replaceWhitespace(bidiResult.str) :
                                       bidiResult.str),
@@ -1272,6 +1282,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
           height: textChunk.height,
           transform: textChunk.transform,
           fontName: textChunk.fontName,
+          hyphenEnd: !textChunk.vertical && str.charAt(str.length - 1) === '-',
           markedContent: textChunk.markedContent
         };
       }
@@ -1385,7 +1396,8 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
         if (!textContentItem.initialized) {
           return;
         }
-        textContent.items.push(runBidiTransform(textContentItem));
+        var items = textContent.items;
+        items.push(runBidiTransform(textContentItem, items[items.length - 1]));
 
         textContentItem.initialized = false;
         textContentItem.str.length = 0;

@@ -550,6 +550,7 @@ var SVGGraphics = (function SVGGraphicsClosure() {
     this.cssStyle = null;
     this._images = {};
     this.pageIndex = pageIndex;
+    this._mcCounter = 0;
   }
 
   var NS = 'http://www.w3.org/2000/svg';
@@ -838,13 +839,14 @@ var SVGGraphics = (function SVGGraphicsClosure() {
             this.group(opTree[x].items);
             break;
           case OPS.beginMarkedContentProps:
+            this._mcCounter++;
             if(args && args.length && this.allStructs){
               var o = args[0];
               if(o.MCID !== this.MCID){
                 this.MCID = o.MCID;
                 this.MCIDoffset = 0;
               }
-              if(o.MCID !== undefined){
+              if(o.MCID !== undefined && !this.infigure){
                 var p = o;
                 while(p){
                   if(p.S === "Figure"){
@@ -864,6 +866,10 @@ var SVGGraphics = (function SVGGraphicsClosure() {
             }
             break;
           case OPS.endMarkedContent:
+            this._mcCounter--;
+            if (this._mcCounter){
+              break;
+            }
             this.MCID = undefined;
             if(this._pgrp){
               var newele = this.pgrp;
@@ -879,6 +885,7 @@ var SVGGraphics = (function SVGGraphicsClosure() {
             this.infigure = null;
             break;
           case OPS.beginMarkedContent:
+            this._mcCounter++;
             break;
           case OPS.dependency:
             //already handled by the loadDependencies
@@ -1488,7 +1495,7 @@ var SVGGraphics = (function SVGGraphicsClosure() {
       }
       newroot.setAttribute('transform', pm(matrix));
       newroot.appendChild(ele);
-      document.body.appendChild(newroot);
+      //document.body.appendChild(newroot);
       return newroot;
     },
 

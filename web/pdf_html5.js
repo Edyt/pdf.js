@@ -220,31 +220,33 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                       elem.setAttribute('href', current.uri);
                     }
                     if (elementname === 'Figure') {
-                      svgFigures[pdfid] = elem;
-                      if(!svgPages[current.page]){
-                        svgPages[current.page] = 1;
-                        promise = promise.then((function(pageindex){
-                            return function(){
-                              return self.pdfViewer.pdfDocument.getPage(pageindex + 1);
-                            };
-                        })(current.page)).then(function (page) {
-                            var viewport = page.getViewport(IMAGE_SCALE);
-                            return page.getOperatorList(true).then(function (opList) {
-                              var svgGfx = new PDFJS.SVGGraphics(page.commonObjs, page.objs, page.pageIndex);
-                              return svgGfx.getSVG(opList, viewport);
-                            });
-                        }).then(function (images) {
-                          var pdfid;
-                          var fig, parent;
-                          for(pdfid in images){
-                            if(fig = svgFigures[pdfid]){
-                              parent = fig.parentNode;
-                              parent.replaceChild(images[pdfid], fig);
-                            } else {
-                              console.warn("missing figure in generated output", pdfid);
+                      if(!isNaN(current.page)){
+                        svgFigures[pdfid] = elem;
+                        if(!svgPages[current.page]){
+                          svgPages[current.page] = 1;
+                          promise = promise.then((function(pageindex){
+                              return function(){
+                                return self.pdfViewer.pdfDocument.getPage(pageindex + 1);
+                              };
+                          })(current.page)).then(function (page) {
+                              var viewport = page.getViewport(IMAGE_SCALE);
+                              return page.getOperatorList(true).then(function (opList) {
+                                var svgGfx = new PDFJS.SVGGraphics(page.commonObjs, page.objs, page.pageIndex);
+                                return svgGfx.getSVG(opList, viewport);
+                              });
+                          }).then(function (images) {
+                            var pdfid;
+                            var fig, parent;
+                            for(pdfid in images){
+                              if(fig = svgFigures[pdfid]){
+                                parent = fig.parentNode;
+                                parent.replaceChild(images[pdfid], fig);
+                              } else {
+                                console.warn("missing figure in generated output", pdfid);
+                              }
                             }
-                          }
-                        });
+                          });
+                        }
                       }
                     } else if (children) {
                       queue = queue.concat(current.children);

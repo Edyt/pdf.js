@@ -187,6 +187,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                 var promise = Promise.resolve();
                 var svgFigures = {};
                 var svgPages = {};
+                var lastelem;
                 while(queue.length){
                   current = queue.pop();
                   parent = elements[current.parentpdfid] || top;
@@ -206,6 +207,18 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                       elementname = 'a';
                     } else if (elementname === 'Document') {
                       elementname = 'div';
+                    }
+                    if (elementname.toLowerCase() === 'table') {
+                      lastelem = parent.firstChild;
+                      if (lastelem && lastelem.nodeName.toLowerCase() === 'table'){
+                        if(children && children[0].children && lastelem.rows.length){
+                          if(children[0].children.length === lastelem.rows[0].cells.length){
+                            elements[pdfid] = lastelem;
+                            queue = queue.concat(current.children);
+                            continue;
+                          }
+                        }
+                      }
                     }
                     elements[pdfid] = elem =
                       parent.insertBefore(document.createElement(elementname),

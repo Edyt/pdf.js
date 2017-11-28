@@ -849,7 +849,7 @@ var SVGGraphics = (function SVGGraphicsClosure() {
               if(o.MCID !== undefined && !this.infigure){
                 var p = o;
                 while(p){
-                  if(p.S === "Figure"){
+                  if(p.S === "Figure" || p.S === "InlineShape"){
                     this._pgrp = this.pgrp;
                     this.pgrp = document.createElementNS(NS, 'svg:g'); // Parent group
                     this.pgrp.setAttribute("figure", p.id);
@@ -1341,8 +1341,16 @@ var SVGGraphics = (function SVGGraphicsClosure() {
 
     stroke: function SVGGraphics_stroke() {
       var current = this.current;
-      current.element.setAttributeNS(null, 'stroke', current.strokeColor);
-      current.element.setAttributeNS(null, 'fill', 'none');
+      var ele = current.element;
+      ele.setAttributeNS(null, 'stroke', current.strokeColor);
+      ele.setAttributeNS(null, 'fill', 'none');
+      if(!current.lineWidth){
+        //0 stroke width means minimal width line. In order to not be
+        //affected by parent transform, use vector-effect to make sure this
+        //stroke is always 1px wide
+        ele.setAttributeNS(null, 'stroke-width', '1px');
+        ele.setAttributeNS(null, 'vector-effect', 'non-scaling-stroke');
+      }
     },
 
     eoFill: function SVGGraphics_eoFill() {
@@ -1493,8 +1501,8 @@ var SVGGraphics = (function SVGGraphicsClosure() {
         matrix[4] -= rect.left;
         matrix[5] -= rect.top;
       }
-      newroot.setAttribute('transform', pm(matrix));
-      newroot.appendChild(ele);
+      newroot.appendChild(document.createElementNS(NS, 'svg:g')).setAttribute('transform', pm(matrix));
+      newroot.lastChild.appendChild(ele);
       //document.body.appendChild(newroot);
       return newroot;
     },

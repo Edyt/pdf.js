@@ -135,6 +135,29 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
     }*/
   }
 
+  var getFontSize = function(tm){
+    return Math.round(Math.sqrt(tm[2]*tm[2] + tm[3]*tm[3]) * 100);
+  };
+
+  var createMCID = function(mcid, textchunks) {
+    var frag = document.createDocumentFragment();
+    var i = 0, chunk, elem, offset = 0;
+    while(chunk = textchunks[i++]){
+      elem = document.createElement('span');
+      elem.setAttribute('MCID', mcid);
+      if(offset){
+        elem.setAttribute('startoffset', offset);
+      }
+      elem.textContent = chunk.str;
+      offset += chunk.str.length;
+      if(chunk.style){
+        elem = document.createElement(chunk.style).appendChild(elem).parentNode;
+      }
+      frag.appendChild(elem);
+    }
+    return frag;
+  }
+
   var IMAGE_SCALE = 1.5;
   PDFHTML5Controller.prototype = {
     extractText: function PDFHTML5Controller_extractText() {
@@ -153,15 +176,22 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
             var textItems = textContent.items;
             var markedSeqs = self.pageMarkedSequences[pageIndex] = {};
             self.pageStructs[pageIndex] = textContent.structs;
-            var item, mcid;
+            var item, mcid, fontsize, mseqs;
             for (var i = 0, len = textItems.length; i < len; i++) {
               item = textItems[i];
               if (item && item.markedContent) {
                 mcid = item.markedContent.MCID;
-                if (!markedSeqs[mcid]) {
-                  markedSeqs[mcid] = {str: item.str, eolHyphen: item.eolHyphen};
+                fontsize = getFontSize(item.transform);
+                mseqs = markedSeqs[mcid] || (markedSeqs[mcid] = []);
+                if (!mseqs.length || mseqs[mseqs.length - 1].fs !== fontsize) {
+                  markedSeqs[mcid].push({str: item.str, eolHyphen: item.eolHyphen,
+                    fs: fontsize, top: item.transform[5],
+                    //
+                    style: (mseqs[0] && mseqs[mseqs.length - 1].fs > fontsize) ?
+                      (item.transform[5] > mseqs[mseqs.length - 1].top ?
+                      'sub' : 'sup') : ''});
                 } else {
-                  markedSeqs[mcid].str += item.str;
+                  mseqs[mseqs.length - 1].str += item.str;
                 }
               }
             }
@@ -255,7 +285,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                                 parent = fig.parentNode;
                                 parent.replaceChild(images[pdfid], fig);
                               } else {
-                                console.warn("missing figure in generated output", pdfid);
+                                console.warn('missing figure in generated output', pdfid);
                               }
                             }
                           });
@@ -268,11 +298,9 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                     //marked content sequence
                     seqs = self.pageMarkedSequences[current.page];
                     if (seqs && seqs[current.MCID]) {
-                      elem = document.createElement('span');
-                      elem.setAttribute('MCID', current.page + '/' + current.MCID);
-                      elem.appendChild(document.createTextNode(seqs[current.MCID].str));
-                      parent.insertBefore(elem,
-                                          parent.firstChild);
+                      parent.insertBefore(
+                        createMCID(current.page + '/' + current.MCID,
+                        seqs[current.MCID]), parent.firstChild);
                     }
                   }
                 }

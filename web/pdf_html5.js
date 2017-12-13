@@ -135,13 +135,48 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
     }*/
   }
 
-  var getFontSize = function(tm){
-    return Math.round(Math.sqrt(tm[2]*tm[2] + tm[3]*tm[3]) * 100);
+  /*var getFontSize = function(tm){
+    return Math.round(Math.sqrt(tm[2]*tm[2] + tm[3]*tm[3]));
+  };*/
+
+  var within = function(d, l, r){
+    return l < d && d < r;
+  };
+  var checkShift = function(last, item) {
+    var tm = item.transform;
+    var left = tm[4], top = -tm[5];
+    var fs = item.height;//getFontSize(tm);
+    var result = null;
+    if(last.top < 0){
+      if(last.sub && last.sub.top === top){
+        result = 'sub';
+      } else if(last.sup && last.sup.top === top) {
+        result = 'sup';
+      } else if(within(left, last.left, last.left + fs)) {
+        if (within(last.top, top, top + fs)) {
+          result = 'sup';
+        } else if (within(top+fs, last.top, last.top+last.height)) {
+          result = 'sub';
+        }
+      } else {
+        last.sub = last.sup = null;
+      }
+    }
+    if(result){
+      last[result] = {top: top};//, height: item.height};
+    } else {
+      last.top = top;
+      last.height = fs;
+    }
+    last.left = left + item.width;
+    //last.shift = result;
+    return result;
   };
 
-  var createMCID = function(mcid, textchunks) {
+  var createMCID = function(mcid, textchunks, lastPos) {
     var frag = document.createDocumentFragment();
     var i = 0, chunk, elem, offset = 0;
+    var styles, checkstyle;
     while(chunk = textchunks[i++]){
       elem = document.createElement('span');
       elem.setAttribute('MCID', mcid);
@@ -150,13 +185,37 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
       }
       elem.textContent = chunk.str;
       offset += chunk.str.length;
-      if(chunk.style){
-        elem = document.createElement(chunk.style).appendChild(elem).parentNode;
+      styles = [];
+      //console.log(mcid, lastPos);
+      checkstyle = checkShift(lastPos, chunk);
+      if(checkstyle){
+        styles.push(checkstyle);
+      }
+      if(styles.length){
+        styles.forEach(function(nodeName){
+          var newelem = document.createElement(nodeName);
+          newelem.appendChild(elem);
+          elem = newelem;
+        });
       }
       frag.appendChild(elem);
     }
     return frag;
-  }
+  };
+
+  var getChunkStyles = function(fontStyle, lastchunk, fontsize, top){
+    var r = [];
+    if(fontStyle.bold){
+      r.push('b');
+    }
+    if(fontStyle.italic){
+      r.push('i');
+    }
+    if(lastchunk && lastchunk.fs > fontsize){
+      r.push(top > lastchunk.top ? 'sub' : 'sup');
+    }
+    return r.length ? r : null;
+  };
 
   var IMAGE_SCALE = 1.5;
   PDFHTML5Controller.prototype = {
@@ -181,18 +240,8 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
               item = textItems[i];
               if (item && item.markedContent) {
                 mcid = item.markedContent.MCID;
-                fontsize = getFontSize(item.transform);
                 mseqs = markedSeqs[mcid] || (markedSeqs[mcid] = []);
-                if (!mseqs.length || mseqs[mseqs.length - 1].fs !== fontsize) {
-                  markedSeqs[mcid].push({str: item.str, eolHyphen: item.eolHyphen,
-                    fs: fontsize, top: item.transform[5],
-                    //
-                    style: (mseqs[0] && mseqs[mseqs.length - 1].fs > fontsize) ?
-                      (item.transform[5] > mseqs[mseqs.length - 1].top ?
-                      'sub' : 'sup') : ''});
-                } else {
-                  mseqs[mseqs.length - 1].str += item.str;
-                }
+                mseqs.push(item);
               }
             }
 
@@ -218,8 +267,9 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                 var svgFigures = {};
                 var svgPages = {};
                 var lastelem;
+                var lastPos = {top: 1}; //needs to be positive
                 while(queue.length){
-                  current = queue.pop();
+                  current = queue.shift();
                   parent = elements[current.parentpdfid] || top;
                   pdfid = current.pdfid;
                   if (current.type === 'StructElem' ){
@@ -227,7 +277,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                     if(children && children.length === 1 && children[0].type === 'MCR'){
                       seqs = self.pageMarkedSequences[current.page];
                       seqs = seqs && seqs[children[0].MCID];
-                      if(seqs && seqs.eolHyphen){
+                      if(seqs && seqs[0].eolHyphen){
                         continue;
                       }
                     }
@@ -244,15 +294,14 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                         if(children && children[0].children && lastelem.rows.length){
                           if(children[0].children.length === lastelem.rows[0].cells.length){
                             elements[pdfid] = lastelem;
-                            queue = queue.concat(current.children);
+                            queue = current.children.concat(queue);
                             continue;
                           }
                         }
                       }
                     }
                     elements[pdfid] = elem =
-                      parent.insertBefore(document.createElement(elementname),
-                                        parent.firstChild);
+                      parent.appendChild(document.createElement(elementname));
 
                     //add non-versioned pdfid to the elements dict
                     if (pdfid.charAt(pdfid.length - 1) !== 'R'){
@@ -292,15 +341,15 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                         }
                       }
                     } else if (children) {
-                      queue = queue.concat(current.children);
+                      queue = current.children.concat(queue);
                     }
                   } else if (current.type === 'MCR') {
                     //marked content sequence
                     seqs = self.pageMarkedSequences[current.page];
                     if (seqs && seqs[current.MCID]) {
-                      parent.insertBefore(
+                      parent.appendChild(
                         createMCID(current.page + '/' + current.MCID,
-                        seqs[current.MCID]), parent.firstChild);
+                        seqs[current.MCID], lastPos));
                     }
                   }
                 }

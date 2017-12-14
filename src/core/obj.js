@@ -241,11 +241,58 @@ var Catalog = (function CatalogClosure() {
         }
         item.parent.children.push(element);
       }
+
+      //remove parent field on each object so that they can be seralized
+      queue = root.children.slice(0);
+      while(queue.length){
+        item = queue.pop();
+        delete item.parent;
+        if(item.children){
+          queue.push.apply(queue, item.children)
+        }
+      }
+
       return root.children.length ? root.children : null;
     },
     _getPageIndex: function(pdfid){
       if (pdfid in this._pageObjMaps) {
         return this._pageObjMaps[pdfid];
+      }
+    },
+    _findLastMCR: function(o){
+      if(o.type === 'MCR'){
+        return [o.page, o.MCID];
+      }
+      var children = o.children;
+      if(children && children.length){
+        return this.__findLastMCR(children[children.length - 1]);
+      }
+      //TODO: recursively find last 
+    },
+    _ensureMCROrder: function(page, mcid, parent){
+      var grandp = parent.parent;
+      var origindex = grandp.children.indexOf(parent);
+      if(origindex<=0){
+        return;
+      }
+      var newindex = -1;
+      var i = origindex - 1, prevchild, lastmcr;
+      while (prevchild = grandp.children[i]) {
+        lastmcr = this._findLastMCR(prevchild);
+        if(!lastmcr){
+          break;
+        }
+        if(lastmcr[0] < page || lastmcr[1] < mcid){
+          break;
+        }
+        if(lastmcr[0] === page && mcid < lastmcr[1]){
+          newindex = i;
+        }
+        i--;
+      }
+      if (newindex >= 0) {
+        grandp.children.splice(origindex, 1);
+        grandp.children.splice(newindex, 0, parent);
       }
     },
     getStructElement: function Catalog_getStructElement(obj, parent) {
@@ -285,6 +332,11 @@ var Catalog = (function CatalogClosure() {
           page = isRef(page) ? this._getPageIndex(page.toString()) : page;
           elemobj = {type: 'MCR', MCID: obj.get('MCID'), page: page, 
             parentpdfid: parent.pdfid};
+          if (parent.name === 'Link') {
+            //Link may be out of order, use MCID to find the proper order in
+            //the output
+            this._ensureMCROrder(page, elemobj.MCID, parent);
+          }
         } else if (type.name === 'OBJR') {
           obj = obj.get('Obj');
           type = obj.get('Type');
@@ -311,6 +363,9 @@ var Catalog = (function CatalogClosure() {
           // other pdf object content
           console.log('TODO support pdf object content in struct element tree', obj);
         }
+      }
+      if(elemobj){
+        elemobj.parent = parent;
       }
       return elemobj;
     },

@@ -2,6 +2,7 @@
   "name": "pdf.js",
   "version": "0.8.0",
   "devDependencies": {
+    "cpx": "^1.5.0",
     "gulp": "^3.9.1",
     "gulp-util": "^3.0.7",
     "jsdoc": "^3.3.0-alpha9",
@@ -16,7 +17,10 @@
     "yargs": "^3.14.0"
   },
   "scripts": {
-    "test": "gulp lint"
+    "test": "gulp lint",
+    "prebuild": "npm install",
+    "build": "node make.js generic components",
+    "postbuild": "cpx build/generic/build/*.js build-dist/build"
   },
   "repository": {
     "type": "git",

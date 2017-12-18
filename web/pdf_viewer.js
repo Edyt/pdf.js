@@ -34,6 +34,7 @@ var DEFAULT_CACHE_SIZE = 10;
 //#include pdf_page_view.js
 //#include text_layer_builder.js
 //#include annotation_layer_builder.js
+//#include pdf_html5.js
 
 /**
  * @typedef {Object} PDFViewerOptions

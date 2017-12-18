@@ -86,6 +86,7 @@ var mozL10n = document.mozL10n || document.webL10n;
 //#include pdf_sidebar.js
 //#include pdf_outline_viewer.js
 //#include pdf_attachment_viewer.js
+//#include pdf_html5.js
 
 var PDFViewerApplication = {
   initialBookmark: document.location.hash.substring(1),

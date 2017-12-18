@@ -234,6 +234,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
 
       var width = ctx.measureText(textDiv.textContent).width;
       if (width > 0) {
+        textDiv.classList.add('text-item');
         textDiv.setAttribute('textLayerDiv', true);
         if (textItem.markedContent) {
           var parent = createParents(textItem.markedContent, textLayerFrag,
@@ -241,7 +242,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
           parent._element.appendChild(textDiv);
           var fullMCID = pageIdx + '/' + mcid;
           textDiv.setAttribute('MCID', fullMCID);
-          
+
           if (!MCIDOffsets[mcid]) {
             MCIDOffsets[mcid] = 0;
           }

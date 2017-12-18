@@ -698,85 +698,85 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
   return PDFHTML5Controller;
 })();
 
-function showReflow(showreflow){
-  if(showreflow) {
-    var iframeid = 'reflowFrame';
-    var iframe = document.getElementById(iframeid);
-    if(!iframe){
-      iframe = document.createElement('iframe');
-      iframe.src = 'reflow.html';
-      iframe.setAttribute('id', iframeid);
-      var style = iframe.style;
-      style.width='50%';
-      style.height='100%';
-      style.position = 'fixed';
-      style.left = "50%";
-      style.top = "0";
-      style.border = "none";
-      style.background = "white";
-      var container = document.getElementById('outerContainer');
-      container.style.width='50%';
-      container.parentNode.appendChild(iframe);
-    }
-  }
-  PDFViewerApplication.pdfViewer.html5.handleEvent().then(function(html){
-    if(!showreflow){
-      if(parent.onPDFHTML){
-        parent.onPDFHTML(html, window);
-      }
-      return;
-    }
-    var htmlwin = iframe.contentWindow;
-      //var title = document.title+" (reflow)";
-      //var htmlwin = window.open('reflow.html#', "ReflowViewer");
-      var initialize = function(){
-        htmlwin.document.body.innerHTML=html;
-        PDFViewerApplication.pdfViewer.html_window = htmlwin;
-        htmlwin.validateHTMLInReflow();
-      };
-      if (htmlwin.document.readyState === 'complete') {
-        initialize();
-      } else {
-        htmlwin.onload = initialize;
-      }
-    });
-}
-
-/*window.addEventListener('keydown', function keydown(evt) {
-  if (evt.ctrlKey && evt.keyCode === 120) { //Ctrl+F9
-    showReflow();
-  }
-});*/
-window.addEventListener('DOMContentLoaded', function(){
-  afteronce(PDFViewerApplication, "initialize", function(){
-    var setDocument = PDFViewerApplication.pdfViewer.setDocument;
-    PDFViewerApplication.pdfViewer.setDocument = function(){
-      var ret = setDocument.apply(this, arguments);
-      this.html5 = new PDFHTML5Controller({pdfViewer: this});
-      showReflow(!parent || parent.htmlOnlyReflow);
-      //setTimeout(showReflow, 0);
-      //this.html5.handleEvent();
-      return ret;
-    };
-    PDFViewerApplication.pdfViewer.setSelection = function(range, type){
-      this.html5.setSelection(range, type);
-    };
-
-    PDFViewerApplication.pdfViewer.markValidationError = function(mcidString, problemType){
-      this.html5.markValidationError(mcidString, problemType);
-    };
-  });
-}, true);
-
-document.addEventListener('mouseup', function(e) {
-  //only clear out aligned format highlighting
-  PDFViewerApplication.pdfViewer.html5.clearHighlight(null, '.alignedSelection');
-  if (!PDFViewerApplication.pdfViewer.html_window) {
-    return;
-  }
-  var range = getMCRange(true);
-  if (range) {
-    console.log('mouseup set selection', range);
-    PDFViewerApplication.pdfViewer.html_window.setSelection(range);
-  }
-}, false);
+// function showReflow(showreflow){
+//   if(showreflow) {
+//     var iframeid = 'reflowFrame';
+//     var iframe = document.getElementById(iframeid);
+//     if(!iframe){
+//       iframe = document.createElement('iframe');
+//       iframe.src = 'reflow.html';
+//       iframe.setAttribute('id', iframeid);
+//       var style = iframe.style;
+//       style.width='50%';
+//       style.height='100%';
+//       style.position = 'fixed';
+//       style.left = "50%";
+//       style.top = "0";
+//       style.border = "none";
+//       style.background = "white";
+//       var container = document.getElementById('outerContainer');
+//       container.style.width='50%';
+//       container.parentNode.appendChild(iframe);
+//     }
+//   }
+//   PDFViewerApplication.pdfViewer.html5.handleEvent().then(function(html){
+//     if(!showreflow){
+//       if(parent.onPDFHTML){
+//         parent.onPDFHTML(html, window);
+//       }
+//       return;
+//     }
+//     var htmlwin = iframe.contentWindow;
+//       //var title = document.title+" (reflow)";
+//       //var htmlwin = window.open('reflow.html#', "ReflowViewer");
+//       var initialize = function(){
+//         htmlwin.document.body.innerHTML=html;
+//         PDFViewerApplication.pdfViewer.html_window = htmlwin;
+//         htmlwin.validateHTMLInReflow();
+//       };
+//       if (htmlwin.document.readyState === 'complete') {
+//         initialize();
+//       } else {
+//         htmlwin.onload = initialize;
+//       }
+//     });
+// }
+//
+// /*window.addEventListener('keydown', function keydown(evt) {
+//   if (evt.ctrlKey && evt.keyCode === 120) { //Ctrl+F9
+//     showReflow();
+//   }
+// });*/
+// window.addEventListener('DOMContentLoaded', function(){
+//   afteronce(PDFViewerApplication, "initialize", function(){
+//     var setDocument = PDFViewerApplication.pdfViewer.setDocument;
+//     PDFViewerApplication.pdfViewer.setDocument = function(){
+//       var ret = setDocument.apply(this, arguments);
+//       this.html5 = new PDFHTML5Controller({pdfViewer: this});
+//       showReflow(!parent || parent.htmlOnlyReflow);
+//       //setTimeout(showReflow, 0);
+//       //this.html5.handleEvent();
+//       return ret;
+//     };
+//     PDFViewerApplication.pdfViewer.setSelection = function(range, type){
+//       this.html5.setSelection(range, type);
+//     };
+//
+//     PDFViewerApplication.pdfViewer.markValidationError = function(mcidString, problemType){
+//       this.html5.markValidationError(mcidString, problemType);
+//     };
+//   });
+// }, true);
+//
+// document.addEventListener('mouseup', function(e) {
+//   //only clear out aligned format highlighting
+//   PDFViewerApplication.pdfViewer.html5.clearHighlight(null, '.alignedSelection');
+//   if (!PDFViewerApplication.pdfViewer.html_window) {
+//     return;
+//   }
+//   var range = getMCRange(true);
+//   if (range) {
+//     console.log('mouseup set selection', range);
+//     PDFViewerApplication.pdfViewer.html_window.setSelection(range);
+//   }
+// }, false);

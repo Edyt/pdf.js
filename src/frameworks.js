@@ -29,7 +29,7 @@ if (typeof module !== 'undefined' && module.require) {
 }
 if (typeof __webpack_require__ !== 'undefined') {
   // Webpack - get/bundle pdf.worker.js as additional file.
-  PDFJS.workerSrc = require('entry?name=[hash]-worker.js!./pdf.worker.js');
+  PDFJS.workerSrc = require('./pdf.worker.js');
   useRequireEnsure = true;
 }
 if (typeof requirejs !== 'undefined' && requirejs.toUrl) {

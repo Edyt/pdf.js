@@ -176,7 +176,7 @@ var isListItemElement = function (element) {
 
 var isListElement = function (element) {
   return element.tagName.toLowerCase() === "l";
-}
+};
 
 function expandAllNodesUpToNextSnippet(e) {
   e.preventDefault();

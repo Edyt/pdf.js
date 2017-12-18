@@ -29,6 +29,7 @@ if (typeof PDFJS === 'undefined') {
 //#include pdf_link_service.js
 //#include pdf_viewer.js
 //#include pdf_history.js
+//#include pdf_html5.js
 //#include download_manager.js
 
   PDFJS.PDFViewer = PDFViewer;

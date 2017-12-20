@@ -289,7 +289,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                       elementname = 'div';
                     }
                     if (elementname.toLowerCase() === 'table') {
-                      lastelem = parent.firstChild;
+                      lastelem = parent.lastChild;
                       if (lastelem && lastelem.nodeName.toLowerCase() === 'table'){
                         if(children && children[0].children && lastelem.rows.length){
                           if(children[0].children.length === lastelem.rows[0].cells.length){

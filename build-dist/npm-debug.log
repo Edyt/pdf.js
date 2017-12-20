@@ -1,0 +1,119 @@
+0 info it worked if it ends with ok
+1 verbose cli [ 'C:\\Program Files\\nodejs\\node.exe',
+1 verbose cli   'C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js',
+1 verbose cli   'publish' ]
+2 info using npm@3.10.3
+3 info using node@v6.7.0
+4 verbose publish [ '.' ]
+5 silly cache add args [ '.', null ]
+6 verbose cache add spec .
+7 silly cache add parsed spec Result {
+7 silly cache add   raw: '.',
+7 silly cache add   scope: null,
+7 silly cache add   escapedName: null,
+7 silly cache add   name: null,
+7 silly cache add   rawSpec: '.',
+7 silly cache add   spec: 'c:\\Projects\\edyt-pdfjs\\build-dist',
+7 silly cache add   type: 'directory' }
+8 verbose addLocalDirectory C:\Users\Konrad\AppData\Roaming\npm-cache\pdfjs-dist\10.0.1\package.tgz not in flight; packing
+9 verbose correctMkdir C:\Users\Konrad\AppData\Roaming\npm-cache correctMkdir not in flight; initializing
+10 info lifecycle pdfjs-dist@10.0.1~prepublish: pdfjs-dist@10.0.1
+11 silly lifecycle pdfjs-dist@10.0.1~prepublish: no script for prepublish, continuing
+12 verbose tar pack [ 'C:\\Users\\Konrad\\AppData\\Roaming\\npm-cache\\pdfjs-dist\\10.0.1\\package.tgz',
+12 verbose tar pack   'c:\\Projects\\edyt-pdfjs\\build-dist' ]
+13 verbose tarball C:\Users\Konrad\AppData\Roaming\npm-cache\pdfjs-dist\10.0.1\package.tgz
+14 verbose folder c:\Projects\edyt-pdfjs\build-dist
+15 verbose addLocalTarball adding from inside cache C:\Users\Konrad\AppData\Roaming\npm-cache\pdfjs-dist\10.0.1\package.tgz
+16 verbose correctMkdir C:\Users\Konrad\AppData\Roaming\npm-cache correctMkdir not in flight; initializing
+17 silly cache afterAdd pdfjs-dist@10.0.1
+18 verbose afterAdd C:\Users\Konrad\AppData\Roaming\npm-cache\pdfjs-dist\10.0.1\package\package.json not in flight; writing
+19 verbose correctMkdir C:\Users\Konrad\AppData\Roaming\npm-cache correctMkdir not in flight; initializing
+20 verbose afterAdd C:\Users\Konrad\AppData\Roaming\npm-cache\pdfjs-dist\10.0.1\package\package.json written
+21 silly publish { _args: [ [ 'pdfjs-dist@10.0.1', '/home/lw/office-in-a-box/frontend' ] ],
+21 silly publish   _from: '.',
+21 silly publish   _id: 'pdfjs-dist@10.0.1',
+21 silly publish   _inBundle: false,
+21 silly publish   _inCache: true,
+21 silly publish   _installable: true,
+21 silly publish   _integrity: 'sha1-aqws2/5ywOIW2OFZy5Pi2SWdzTA=',
+21 silly publish   _location: '/pdfjs-dist',
+21 silly publish   _nodeVersion: '8.6.0',
+21 silly publish   _npmUser: { name: 'teampatent-deploy', email: 'tp@sparkbit.pl' },
+21 silly publish   _npmVersion: '5.3.0',
+21 silly publish   _phantomChildren: {},
+21 silly publish   _requested:
+21 silly publish    { type: 'version',
+21 silly publish      registry: true,
+21 silly publish      raw: 'pdfjs-dist@10.0.1',
+21 silly publish      name: 'pdfjs-dist',
+21 silly publish      escapedName: 'pdfjs-dist',
+21 silly publish      rawSpec: '10.0.1',
+21 silly publish      saveSpec: null,
+21 silly publish      fetchSpec: '10.0.1' },
+21 silly publish   _requiredBy: [ '/' ],
+21 silly publish   _resolved: 'https://tp-nexus.sparkbit.pl/repository/npm-tp/pdfjs-dist/-/pdfjs-dist-10.0.1.tgz',
+21 silly publish   _shasum: 'e4231795a71853370c20454f3df9f344960ee8c9',
+21 silly publish   _shrinkwrap: null,
+21 silly publish   _spec: '10.0.1',
+21 silly publish   _where: '/home/lw/office-in-a-box/frontend',
+21 silly publish   browser: { fs: false, http: false, https: false, 'node-ensure': false },
+21 silly publish   bugs: { url: 'https://github.com/mozilla/pdf.js/issues' },
+21 silly publish   dependencies: { 'node-ensure': '^0.0.0', 'worker-loader': '^1.0.0' },
+21 silly publish   description: 'Generic build of Mozilla\'s PDF.js library.',
+21 silly publish   devDependencies: {},
+21 silly publish   dist:
+21 silly publish    { integrity: 'sha512-NmCO6DvHnKBrAISMIqePcsgtvV2j1TnfclJkM0LIWdbliQTBu/FA1Ci2SHNaso6Qbeae1Gc2aTfU3q7SCEwT0A==',
+21 silly publish      shasum: '1842f56e76b1ffab1cd0b49e868fdb150b4b971c',
+21 silly publish      tarball: 'https://tp-nexus.sparkbit.pl/repository/npm-tp/pdfjs-dist/-/pdfjs-dist-10.0.1.tgz' },
+21 silly publish   format: 'amd',
+21 silly publish   homepage: 'http://mozilla.github.io/pdf.js/',
+21 silly publish   keywords: [ 'Mozilla', 'pdf', 'pdf.js' ],
+21 silly publish   license: 'Apache-2.0',
+21 silly publish   main: 'build/pdf.js',
+21 silly publish   files: [ 'build/pdf_html5.js' ],
+21 silly publish   maintainers: [ { name: 'teampatent-deploy', email: 'tp@sparkbit.pl' } ],
+21 silly publish   name: 'pdfjs-dist',
+21 silly publish   optionalDependencies: {},
+21 silly publish   publishConfig: { registry: 'https://tp-nexus.sparkbit.pl/repository/npm-releases/' },
+21 silly publish   readme: '# PDF.js\n\nPDF.js is a Portable Document Format (PDF) library that is built with HTML5.\nOur goal is to create a general-purpose, web standards-based platform for\nparsing and rendering PDFs.\n\nThis is a pre-built version of the PDF.js source code. It is automatically\ngenerated by the build scripts.\n\nSee https://github.com/mozilla/pdf.js for learning and contributing.\n',
+21 silly publish   readmeFilename: 'README.md',
+21 silly publish   repository:
+21 silly publish    { type: 'git',
+21 silly publish      url: 'git+https://github.com/mozilla/pdfjs-dist.git' },
+21 silly publish   version: '10.0.1',
+21 silly publish   scripts: {} }
+22 verbose getPublishConfig { registry: 'https://tp-nexus.sparkbit.pl/repository/npm-releases/' }
+23 silly mapToRegistry name pdfjs-dist
+24 silly mapToRegistry using default registry
+25 silly mapToRegistry registry https://tp-nexus.sparkbit.pl/repository/npm-releases/
+26 silly mapToRegistry data Result {
+26 silly mapToRegistry   raw: 'pdfjs-dist',
+26 silly mapToRegistry   scope: null,
+26 silly mapToRegistry   escapedName: 'pdfjs-dist',
+26 silly mapToRegistry   name: 'pdfjs-dist',
+26 silly mapToRegistry   rawSpec: '',
+26 silly mapToRegistry   spec: 'latest',
+26 silly mapToRegistry   type: 'tag' }
+27 silly mapToRegistry uri https://tp-nexus.sparkbit.pl/repository/npm-releases/pdfjs-dist
+28 verbose publish registryBase https://tp-nexus.sparkbit.pl/repository/npm-releases/
+29 silly publish uploading C:\Users\Konrad\AppData\Roaming\npm-cache\pdfjs-dist\10.0.1\package.tgz
+30 verbose stack Error: auth required for publishing
+30 verbose stack     at CachingRegistryClient.publish (C:\Program Files\nodejs\node_modules\npm\node_modules\npm-registry-client\lib\publish.js:30:14)
+30 verbose stack     at C:\Program Files\nodejs\node_modules\npm\lib\publish.js:138:14
+30 verbose stack     at mapToRegistry (C:\Program Files\nodejs\node_modules\npm\lib\utils\map-to-registry.js:62:3)
+30 verbose stack     at publish_ (C:\Program Files\nodejs\node_modules\npm\lib\publish.js:107:3)
+30 verbose stack     at Array.<anonymous> (C:\Program Files\nodejs\node_modules\npm\node_modules\slide\lib\bind-actor.js:15:8)
+30 verbose stack     at LOOP (C:\Program Files\nodejs\node_modules\npm\node_modules\slide\lib\chain.js:15:14)
+30 verbose stack     at LOOP (C:\Program Files\nodejs\node_modules\npm\node_modules\slide\lib\chain.js:14:28)
+30 verbose stack     at chain (C:\Program Files\nodejs\node_modules\npm\node_modules\slide\lib\chain.js:20:5)
+30 verbose stack     at C:\Program Files\nodejs\node_modules\npm\lib\publish.js:73:5
+30 verbose stack     at RES (C:\Program Files\nodejs\node_modules\npm\node_modules\inflight\inflight.js:23:14)
+31 verbose cwd c:\Projects\edyt-pdfjs\build-dist
+32 error Windows_NT 10.0.15063
+33 error argv "C:\\Program Files\\nodejs\\node.exe" "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js" "publish"
+34 error node v6.7.0
+35 error npm  v3.10.3
+36 error code ENEEDAUTH
+37 error need auth auth required for publishing
+38 error need auth You need to authorize this machine using `npm adduser`
+39 verbose exit [ 1, true ]

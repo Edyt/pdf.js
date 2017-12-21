@@ -96,6 +96,16 @@ var renderTextLayer = (function renderTextLayerClosure() {
           break;
         } else {
           var type = getHTMLType(parent.S, roleMap);
+          if(type === 'a'){
+            //skip links, as they will mess up getClientsRect on ranges if the
+            //a link is within the range, see LABS-41
+            var newp = structs[parent.parentid];
+            if(parent === firstparent){
+              firstparent = newp;
+            }
+            parent = newp;
+            continue;
+          }
           parent._element = document.createElement(type);
           if (child) {
             parent._element.appendChild(child._element);

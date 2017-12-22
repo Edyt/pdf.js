@@ -135,17 +135,16 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
     }*/
   }
 
-  /*var getFontSize = function(tm){
-    return Math.round(Math.sqrt(tm[2]*tm[2] + tm[3]*tm[3]));
-  };*/
-
   var within = function(d, l, r){
-    return l < d && d < r;
+    return l<d && d<r;
+  };
+  var ratio = function(r, l, fontsize){
+    return (r-l)/fontsize;
   };
   var checkShift = function(last, item) {
     var tm = item.transform;
-    var left = tm[4], top = -tm[5];
     var fs = item.height;//getFontSize(tm);
+    var left = tm[4], top = -tm[5] - (item.topshift || fs);
     var result = null;
     if(last.top < 0){
       if(last.sub && last.sub.top === top){
@@ -153,9 +152,9 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
       } else if(last.sup && last.sup.top === top) {
         result = 'sup';
       } else if(within(left, last.left, last.left + fs)) {
-        if (within(last.top, top, top + fs)) {
+        if (within(top+fs, last.top, last.top+last.height) && ratio(last.top+last.height, top+fs, last.height)>0.1) {
           result = 'sup';
-        } else if (within(top+fs, last.top, last.top+last.height)) {
+        } else if(within(top, last.top, last.top+last.height) && ratio(top, last.top, last.height) > 0.1) {
           result = 'sub';
         }
       } else {
@@ -235,6 +234,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
             var textItems = textContent.items;
             var markedSeqs = self.pageMarkedSequences[pageIndex] = {};
             self.pageStructs[pageIndex] = textContent.structs;
+            var styles = textContent.styles, style;
             var item, mcid, fontsize, mseqs;
             for (var i = 0, len = textItems.length; i < len; i++) {
               item = textItems[i];
@@ -242,6 +242,12 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                 mcid = item.markedContent.MCID;
                 mseqs = markedSeqs[mcid] || (markedSeqs[mcid] = []);
                 mseqs.push(item);
+                style = styles[item.fontName];
+                if (style.ascent) {
+                  item.topshift = style.ascent * item.height;
+                } else if (style.descent) {
+                  item.topshift= (1 + style.descent) * item.height;
+                }
               }
             }
 

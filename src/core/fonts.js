@@ -519,6 +519,15 @@ var Font = (function FontClosure() {
       this.vmetrics = properties.vmetrics;
       this.defaultVMetrics = properties.defaultVMetrics;
     }
+
+    this.isBold = properties.flags && (properties.flags & FontFlags.ForceBold) ||
+      (name.search(/bold/gi) !== -1);
+    this.isItalic = !!properties.italicAngle || 
+                  (properties.flags && 
+                   (properties.flags & FontFlags.Italic)) || 
+                     (name.search(/oblique/gi) !== -1) ||
+                     (name.search(/italic/gi) !== -1);
+
     var glyphsUnicodeMap;
     if (!file || file.isEmpty) {
       if (file) {

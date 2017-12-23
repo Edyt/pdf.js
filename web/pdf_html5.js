@@ -190,6 +190,12 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
       if(checkstyle){
         styles.push(checkstyle);
       }
+      if(chunk.italic){
+        styles.push('i');
+      }
+      if(chunk.bold){
+        styles.push('b');
+      }
       if(styles.length){
         styles.forEach(function(nodeName){
           var newelem = document.createElement(nodeName);
@@ -200,20 +206,6 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
       frag.appendChild(elem);
     }
     return frag;
-  };
-
-  var getChunkStyles = function(fontStyle, lastchunk, fontsize, top){
-    var r = [];
-    if(fontStyle.bold){
-      r.push('b');
-    }
-    if(fontStyle.italic){
-      r.push('i');
-    }
-    if(lastchunk && lastchunk.fs > fontsize){
-      r.push(top > lastchunk.top ? 'sub' : 'sup');
-    }
-    return r.length ? r : null;
   };
 
   var IMAGE_SCALE = 1.5;
@@ -247,6 +239,12 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                   item.topshift = style.ascent * item.height;
                 } else if (style.descent) {
                   item.topshift= (1 + style.descent) * item.height;
+                }
+                if(style.bold){
+                  item.bold = true;
+                }
+                if(style.italic){
+                  item.italic = true;
                 }
               }
             }

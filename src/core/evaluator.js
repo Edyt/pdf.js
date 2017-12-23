@@ -1182,6 +1182,8 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
             fontFamily: font.fallbackName,
             ascent: font.ascent,
             descent: font.descent,
+            bold: font.isBold,
+            italic: font.isItalic,
             vertical: font.vertical
           };
         }

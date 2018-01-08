@@ -20,7 +20,7 @@
     "test": "gulp lint",
     "prebuild": "npm install",
     "build": "node make.js generic components",
-    "postbuild": "cpx build/generic/build/*.js build-dist/build && cpx web/pdf_html5.js build-dist/build",
+    "postbuild": "cpx build/generic/build/*.js build-dist/build && cpx build/components/pdf_viewer.js build-dist/build",
     "deploy": "cd build-dist && npm publish"
   },
   "repository": {

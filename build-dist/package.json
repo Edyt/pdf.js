@@ -1,12 +1,12 @@
 {
   "_args": [
     [
-      "pdfjs-dist@10.0.1",
+      "pdfjs-dist@10.0.2",
       "/home/lw/office-in-a-box/frontend"
     ]
   ],
-  "_from": "pdfjs-dist@10.0.1",
-  "_id": "pdfjs-dist@10.0.1",
+  "_from": "pdfjs-dist@10.0.2",
+  "_id": "pdfjs-dist@10.0.2",
   "_inBundle": false,
   "_inCache": true,
   "_installable": true,
@@ -22,20 +22,20 @@
   "_requested": {
     "type": "version",
     "registry": true,
-    "raw": "pdfjs-dist@10.0.1",
+    "raw": "pdfjs-dist@10.0.2",
     "name": "pdfjs-dist",
     "escapedName": "pdfjs-dist",
-    "rawSpec": "10.0.1",
+    "rawSpec": "10.0.2",
     "saveSpec": null,
-    "fetchSpec": "10.0.1"
+    "fetchSpec": "10.0.2"
   },
   "_requiredBy": [
     "/"
   ],
-  "_resolved": "https://tp-nexus.sparkbit.pl/repository/npm-tp/pdfjs-dist/-/pdfjs-dist-10.0.1.tgz",
+  "_resolved": "https://tp-nexus.sparkbit.pl/repository/npm-tp/pdfjs-dist/-/pdfjs-dist-10.0.2.tgz",
   "_shasum": "1842f56e76b1ffab1cd0b49e868fdb150b4b971c",
   "_shrinkwrap": null,
-  "_spec": "10.0.1",
+  "_spec": "10.0.2",
   "_where": "/home/lw/office-in-a-box/frontend",
   "browser": {
     "fs": false,
@@ -55,7 +55,7 @@
   "dist": {
     "integrity": "sha512-NmCO6DvHnKBrAISMIqePcsgtvV2j1TnfclJkM0LIWdbliQTBu/FA1Ci2SHNaso6Qbeae1Gc2aTfU3q7SCEwT0A==",
     "shasum": "1842f56e76b1ffab1cd0b49e868fdb150b4b971c",
-    "tarball": "https://tp-nexus.sparkbit.pl/repository/npm-tp/pdfjs-dist/-/pdfjs-dist-10.0.1.tgz"
+    "tarball": "https://tp-nexus.sparkbit.pl/repository/npm-tp/pdfjs-dist/-/pdfjs-dist-10.0.2.tgz"
   },
   "format": "amd",
   "homepage": "http://mozilla.github.io/pdf.js/",
@@ -66,7 +66,7 @@
   ],
   "license": "Apache-2.0",
   "main": "build/pdf.js",
-  "files": ["build/pdf_html5.js"],
+  "files": ["build/pdf_viewer.js"],
   "maintainers": [
     {
       "name": "oiab-deploy",
@@ -84,5 +84,5 @@
     "type": "git",
     "url": "git+https://github.com/mozilla/pdfjs-dist.git"
   },
-  "version": "10.0.1"
+  "version": "10.0.2"
 }

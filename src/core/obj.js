@@ -178,8 +178,10 @@ var Catalog = (function CatalogClosure() {
         }
         return objs;
       };
+      var childrenObj = this.getChildrenStructElements(children);
       return {
-        children: this.getChildrenStructElements(children),
+        children: childrenObj.children.length ? childrenObj.children : null,
+        hasattrs: !childrenObj.noattrs,
         IDTree: cleanObj(IDTree),
         ParentTree: cleanObj(ParentTree.getAll()),
         RoleMap: roleMap
@@ -190,7 +192,7 @@ var Catalog = (function CatalogClosure() {
       if (!children) {
         return null;
       }
-      var root = {children: []};
+      var root = {children: [], noattrs: true}, noattrs = true;
       // To avoid recursion, keep track of the already processed items.
       var processed = new RefSet();
       var queue = children.map(function(child){
@@ -206,6 +208,9 @@ var Catalog = (function CatalogClosure() {
         element = this.getStructElement(item.obj, item.parent);
         if (!element) {
           continue;
+        }
+        if (noattrs && element.attrs){
+          noattrs = false;
         }
 
         //figure does not have a page associated in the pdf object, instead use
@@ -252,7 +257,8 @@ var Catalog = (function CatalogClosure() {
         }
       }
 
-      return root.children.length ? root.children : null;
+      root.noattrs = noattrs;
+      return root;
     },
     _getPageIndex: function(pdfid){
       if (pdfid in this._pageObjMaps) {
@@ -322,6 +328,20 @@ var Catalog = (function CatalogClosure() {
           };
           if (obj.has('K')) {
             elemobj.children = [].concat(obj.get('K'));
+          }
+          var attrs = null;
+          if (obj.has('A')) {
+            attrs = {};
+            obj.get('A').forEach(function(k, v){
+              if (k && v) {
+                attrs[k.toLowerCase()] = v.name ? v.name.toLowerCase() : v;
+              }
+            });
+            //console.log(attrs, obj.get('S').name);
+            if(attrs.baselineshift || attrs.textdecorationtype){
+              //only set attrs if either of these recognized styling is present
+              elemobj.attrs = attrs;
+            }
           }
         } else if (type.name === 'MCR') {
           var page = obj.getRaw('Pg');

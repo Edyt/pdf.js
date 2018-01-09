@@ -151,7 +151,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
         result = 'sub';
       } else if(last.sup && last.sup.top === top) {
         result = 'sup';
-      } else if(within(left, last.left, last.left + fs)) {
+      } else if(within(left, last.left, last.left + fs) || within(left, last.left-fs/2, last.left)) {
         if (within(top+fs, last.top, last.top+last.height) && ratio(last.top+last.height, top+fs, last.height)>0.1) {
           result = 'sup';
         } else if(within(top, last.top, last.top+last.height) && ratio(top, last.top, last.height) > 0.1) {
@@ -172,7 +172,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
     return result;
   };
 
-  var createMCID = function(mcid, textchunks, lastPos) {
+  var createMCID = function(mcid, textchunks, lastPos, shiftcheck) {
     var frag = document.createDocumentFragment();
     var i = 0, chunk, elem, offset = 0;
     var styles, checkstyle;
@@ -186,7 +186,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
       offset += chunk.str.length;
       styles = [];
       //console.log(mcid, lastPos);
-      checkstyle = checkShift(lastPos, chunk);
+      checkstyle = shiftcheck && checkShift(lastPos, chunk);
       if(checkstyle){
         styles.push(checkstyle);
       }
@@ -208,6 +208,25 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
     return frag;
   };
 
+  function setTextDecoration(elem, textdecoration){
+    if (textdecoration) {
+      if (textdecoration === 'linethrough') {
+        textdecoration = 'line-through';
+      }
+      elem.style.textDecoration = textdecoration;
+    }
+  }
+  function setVerticalAlign(elem, align){
+    if (align) {
+      if(align > 0){
+        align = 'super';
+      }else{
+        align = 'sub';
+      }
+      elem.style.verticalAlign = align;
+    }
+  }
+
   var IMAGE_SCALE = 1.5;
   PDFHTML5Controller.prototype = {
     extractText: function PDFHTML5Controller_extractText() {
@@ -217,7 +236,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
       this.startedTextExtraction = true;
 
       this.pageMarkedSequences = [];
-      this.pageStructs = [];
+      //this.pageStructs = [];
 
       var self = this;
       function extractPageText(pageIndex) {
@@ -225,7 +244,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
           function textContentResolved(textContent) {
             var textItems = textContent.items;
             var markedSeqs = self.pageMarkedSequences[pageIndex] = {};
-            self.pageStructs[pageIndex] = textContent.structs;
+            //self.pageStructs[pageIndex] = textContent.structs;
             var styles = textContent.styles, style;
             var item, mcid, fontsize, mseqs;
             for (var i = 0, len = textItems.length; i < len; i++) {
@@ -260,6 +279,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                   return;
                 }
                 var roleMap = structTree.RoleMap;
+                var hasattrs = structTree.hasattrs;
                 if(!('Part' in roleMap)){
                   roleMap.Part = 'section';
                 }
@@ -315,6 +335,12 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                     if (elementname === 'a' && current.uri) {
                       elem.setAttribute('href', current.uri);
                     }
+
+                    if(current.attrs){
+                      setTextDecoration(elem, current.attrs.textdecorationtype);
+                      setVerticalAlign(elem, current.attrs.baselineshift);
+                    }
+
                     if (elementname === 'Figure') {
                       if(!isNaN(current.page)){
                         svgFigures[pdfid] = elem;
@@ -353,7 +379,7 @@ var PDFHTML5Controller = (function PDFHTML5ControllerClosure() {
                     if (seqs && seqs[current.MCID]) {
                       parent.appendChild(
                         createMCID(current.page + '/' + current.MCID,
-                        seqs[current.MCID], lastPos));
+                        seqs[current.MCID], lastPos, !hasattrs));
                     }
                   }
                 }

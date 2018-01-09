@@ -1402,6 +1402,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
         items.push(runBidiTransform(textContentItem, items[items.length - 1]));
 
         textContentItem.initialized = false;
+        delete textContentItem.markedContent;
         textContentItem.str.length = 0;
       }
 
@@ -1667,11 +1668,21 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                   //reached StructTreeRoot
                   break;
                 }
+                var attrs = null;
+                if (parent.has('A')) {
+                  attrs = {};
+                  parent.get('A').forEach(function(k, v){
+                    if (k && v) {
+                      attrs[k.toLowerCase()] = v.name ? v.name.toLowerCase() : v;
+                    }
+                  });
+                  //console.log(attrs, parent.get('S').name);
+                }
                 textContent.structs[parent.objId] = {
                   S: parent.get('S').name,
                   id: parent.objId,
+                  A: attrs,
                   parentid: grandparent.objId
-                  //TODO: add Attributes(A) and children(K)
                   //is K needed?
                 };
 

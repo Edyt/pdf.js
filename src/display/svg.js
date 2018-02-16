@@ -269,7 +269,7 @@ var convertImgDataToPng = (function convertImgDataToPngClosure() {
     return (b << 16) | a;
   }
 
-  function encode(imgData, kind) {
+  function encode(imgData, kind, justImage) {
     var width = imgData.width;
     var height = imgData.height;
     var bitDepth, colorType, lineSize;
@@ -385,13 +385,16 @@ var convertImgDataToPng = (function convertImgDataToPngClosure() {
     offset += CHUNK_WRAPPER_SIZE + idat.length;
     writePngChunk('IEND', new Uint8Array(0), data, offset);
 
+    if(justImage){
+      return PDFJS.createBlob(data, 'image/png');
+    }
     return PDFJS.createObjectURL(data, 'image/png');
   }
 
-  return function convertImgDataToPng(imgData) {
+  return function convertImgDataToPng(imgData, justImage) {
     var kind = (imgData.kind === undefined ?
                 ImageKind.GRAYSCALE_1BPP : imgData.kind);
-    return encode(imgData, kind);
+    return encode(imgData, kind, justImage);
   };
 })();
 
@@ -536,7 +539,7 @@ var SVGGraphics = (function SVGGraphicsClosure() {
       pf(m[3]) + ' ' + pf(m[4]) + ' ' + pf(m[5]) + ')';
   }
 
-  function SVGGraphics(commonObjs, objs, pageIndex) {
+  function SVGGraphics(commonObjs, objs, pageIndex, justImage) {
     this.current = new SVGExtraState();
     this.transformMatrix = IDENTITY_MATRIX; // Graphics state matrix
     this.transformStack = [];
@@ -548,8 +551,10 @@ var SVGGraphics = (function SVGGraphicsClosure() {
     this.embedFonts = false;
     this.embeddedFonts = Object.create(null);
     this.cssStyle = null;
-    this._images = {};
     this.pageIndex = pageIndex;
+    this._justImage = !!justImage;
+    this._images = {};
+    this._rasters = {};
     this._mcCounter = 0;
   }
 
@@ -654,8 +659,11 @@ var SVGGraphics = (function SVGGraphicsClosure() {
         this.svg.appendChild(this.pgrp);
         var opTree = this.convertOpList(operatorList);
         this.executeOpTree(opTree);
-        return this._images;
-        //return this.svg;
+        if(this._justImage){
+          return {images: this._images, rasters: this._rasters};
+        }else{
+          return this.svg;
+        }
       }.bind(this));
     },
 
@@ -1429,7 +1437,15 @@ var SVGGraphics = (function SVGGraphicsClosure() {
       var width = imgData.width;
       var height = imgData.height;
 
-      var imgSrc = convertImgDataToPng(imgData);
+      var imgSrc = convertImgDataToPng(imgData, this._justImage);
+      if(this._justImage){
+        if(this.infigure){
+          this._rasters[this.infigure.id] = imgSrc
+          imgSrc = this.infigure.id;
+        }else{
+          throw new Error('paintInlineImageXObject: no figure id is available');
+        }
+      }
       var cliprect = document.createElementNS(NS, 'svg:rect');
       cliprect.setAttributeNS(null, 'x', '0');
       cliprect.setAttributeNS(null, 'y', '0');

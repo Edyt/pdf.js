@@ -24,7 +24,7 @@
     "postbuild": "cpx build/generic/build/*.js build-dist/build",
     "deploy": "cd build-dist && make-dir .git && npm version patch -m \"Update to main branch (deployed version: %s)\" && npm publish && rimraf .git && cd ..",
     "version": "git add build-dist/package.json",
-    "postversion": "git push && git push --tags"
+    "postdeploy": "git push && git push --tags"
   },
   "repository": {
     "type": "git",

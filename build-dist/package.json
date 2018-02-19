@@ -1,42 +1,4 @@
 {
-  "_args": [
-    [
-      "pdfjs-dist@10.0.4",
-      "/home/lw/office-in-a-box/frontend"
-    ]
-  ],
-  "_from": "pdfjs-dist@10.0.4",
-  "_id": "pdfjs-dist@10.0.4",
-  "_inBundle": false,
-  "_inCache": true,
-  "_installable": true,
-  "_integrity": "sha1-aqws2/5ywOIW2OFZy5Pi2SWdzTA=",
-  "_location": "/pdfjs-dist",
-  "_nodeVersion": "8.6.0",
-  "_npmUser": {
-    "name": "oiab-deploy",
-    "email": "oiab@sparkbit.pl"
-  },
-  "_npmVersion": "5.3.0",
-  "_phantomChildren": {},
-  "_requested": {
-    "type": "version",
-    "registry": true,
-    "raw": "pdfjs-dist@10.0.4",
-    "name": "pdfjs-dist",
-    "escapedName": "pdfjs-dist",
-    "rawSpec": "10.0.4",
-    "saveSpec": null,
-    "fetchSpec": "10.0.4"
-  },
-  "_requiredBy": [
-    "/"
-  ],
-  "_resolved": "https://tp-nexus.sparkbit.pl/repository/npm-tp/pdfjs-dist/-/pdfjs-dist-10.0.4.tgz",
-  "_shasum": "1842f56e76b1ffab1cd0b49e868fdb150b4b971c",
-  "_shrinkwrap": null,
-  "_spec": "10.0.4",
-  "_where": "/home/lw/office-in-a-box/frontend",
   "browser": {
     "fs": false,
     "http": false,
@@ -66,7 +28,9 @@
   ],
   "license": "Apache-2.0",
   "main": "build/pdf.js",
-  "files": ["build/pdf_viewer.js"],
+  "files": [
+    "build/pdf_viewer.js"
+  ],
   "maintainers": [
     {
       "name": "oiab-deploy",

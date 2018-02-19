@@ -21,7 +21,9 @@
     "prebuild": "npm install",
     "build": "node make.js generic components",
     "postbuild": "cpx build/generic/build/*.js build-dist/build",
-    "deploy": "cd build-dist && npm version patch -m 'Update to main branch (deployed version: %s)' && git push && git push --tags && npm publish && cd .."
+    "deploy": "cd build-dist && npm version patch -m \"Update to main branch (deployed version: %s)\" && npm publish && cd ..",
+    "version": "git add build-dist/package.json",
+    "postversion": "git push && git push --tags"
   },
   "repository": {
     "type": "git",

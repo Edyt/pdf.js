@@ -245,7 +245,6 @@ var renderTextLayer = (function renderTextLayerClosure() {
       var width = ctx.measureText(textDiv.textContent).width;
       if (width > 0) {
         textDiv.classList.add('text-item');
-        textDiv.setAttribute('textLayerDiv', true);
         if (textItem.markedContent) {
           var parent = createParents(textItem.markedContent, textLayerFrag,
                                      structs, roleMap);

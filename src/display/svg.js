@@ -1444,9 +1444,6 @@ var SVGGraphics = (function SVGGraphicsClosure() {
         } else {
           throw new Error('paintInlineImageXObject: no figure id is available');
         }
-        if (this._justImage && this.infigure) {
-          imgEl.setAttributeNS(null, 'src', this.infigure.id);
-        }
       }
       var cliprect = document.createElementNS(NS, 'svg:rect');
       cliprect.setAttributeNS(null, 'x', '0');
@@ -1464,6 +1461,9 @@ var SVGGraphics = (function SVGGraphicsClosure() {
       imgEl.setAttributeNS(null, 'transform',
                            'scale(' + pf(1 / width) + ' ' +
                            pf(-1 / height) + ')');
+      if (this._justImage && this.infigure) {
+        imgEl.setAttributeNS(null, 'src', this.infigure.id);
+      }
 
       var bb = this.infigure && this.infigure.bb;
       if (bb){

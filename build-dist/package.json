@@ -29,7 +29,7 @@
   "license": "Apache-2.0",
   "main": "build/pdf.js",
   "files": [
-    "build/pdf_viewer.js"
+    "build/pdf.worker.js"
   ],
   "maintainers": [
     {

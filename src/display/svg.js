@@ -47,7 +47,7 @@ BoundingBox.prototype = {
   height: function () {
     return this.y2 - this.y1 || 0;
   },
-  
+
   addPoint: function (x, y) {
     if (!isNaN(x)) {
       if (isNaN(this.x1) || isNaN(this.x2)) {
@@ -1431,19 +1431,21 @@ var SVGGraphics = (function SVGGraphicsClosure() {
       this.paintInlineImageXObject(imgData);
     },
 
-    paintInlineImageXObject:
-        function SVGGraphics_paintInlineImageXObject(imgData, mask) {
+    paintInlineImageXObject: function SVGGraphics_paintInlineImageXObject(imgData, mask) {
       var current = this.current;
       var width = imgData.width;
       var height = imgData.height;
 
       var imgSrc = convertImgDataToPng(imgData, this._justImage);
-      if(this._justImage){
-        if(this.infigure){
-          this._rasters[this.infigure.id] = imgSrc
-          imgSrc = this.infigure.id;
-        }else{
+      if (this._justImage) {
+        if (this.infigure) {
+          this._rasters[this.infigure.id] = imgSrc;
+          imgSrc = 'about:blank';
+        } else {
           throw new Error('paintInlineImageXObject: no figure id is available');
+        }
+        if (this._justImage && this.infigure) {
+          imgEl.setAttributeNS(null, 'src', this.infigure.id);
         }
       }
       var cliprect = document.createElementNS(NS, 'svg:rect');

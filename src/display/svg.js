@@ -1440,8 +1440,8 @@ var SVGGraphics = (function SVGGraphicsClosure() {
       var imgSrc = convertImgDataToPng(imgData, this._justImage);
       if(this._justImage){
         if(this.infigure){
-          this._rasters[this.infigure.id] = imgSrc
-          imgSrc = this.infigure.id;
+          this._rasters[this.infigure.id] = imgSrc;
+          imgSrc = 'about:blank';
         }else{
           throw new Error('paintInlineImageXObject: no figure id is available');
         }
@@ -1462,6 +1462,9 @@ var SVGGraphics = (function SVGGraphicsClosure() {
       imgEl.setAttributeNS(null, 'transform',
                            'scale(' + pf(1 / width) + ' ' +
                            pf(-1 / height) + ')');
+      if(this._justImage && this.infigure) {
+        imgEl.setAttributeNS(null, 'src', this.infigure.id);
+      }
 
       var bb = this.infigure && this.infigure.bb;
       if (bb){

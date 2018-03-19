@@ -27,167 +27,6 @@
   }
 }(this, function (exports, sharedUtil) {
 
-var NaN = Number.NaN;
-function BoundingBox(x1, y1, x2, y2) {
-  this.x1 = NaN;
-  this.y1 = NaN;
-  this.x2 = NaN;
-  this.y2 = NaN;
-
-  this.addPoint(x1, y1);
-  this.addPoint(x2, y2);
-}
-
-BoundingBox.prototype = {
-
-  width: function () {
-    return this.x2 - this.x1 || 0;
-  },
-
-  height: function () {
-    return this.y2 - this.y1 || 0;
-  },
-
-  addPoint: function (x, y) {
-    if (!isNaN(x)) {
-      if (isNaN(this.x1) || isNaN(this.x2)) {
-        this.x1 = this.x2 = x;
-      }
-      if (x < this.x1) this.x1 = x;
-      else if (x > this.x2) this.x2 = x;
-    }
-
-    if (!isNaN(y)) {
-      if (isNaN(this.y1) || isNaN(this.y2)) {
-        this.y1 = this.y2 = y;
-      }
-      if (y < this.y1) this.y1 = y;
-      else if (y > this.y2) this.y2 = y;
-    }
-  },
-
-  addX: function (x) {
-    this.addPoint(x);
-  },
-
-  addY: function (y) {
-    this.addPoint(NaN, y);
-  },
-
-  addRect: function(x1, y1, x2, y2) {
-    this.addPoint(x1, y1);
-    this.addPoint(x1, y2);
-    this.addPoint(x2, y1);
-    this.addPoint(x2, y2);
-  },
-
-  addQuadraticCurve: function (p0x, p0y, p1x, p1y, p2x, p2y) {
-    var cp1x = p0x + 2 / 3 * (p1x - p0x); // CP1 = QP0 + 2/3 *(QP1-QP0)
-    var cp1y = p0y + 2 / 3 * (p1y - p0y); // CP1 = QP0 + 2/3 *(QP1-QP0)
-    var cp2x = cp1x + 1 / 3 * (p2x - p0x); // CP2 = CP1 + 1/3 *(QP2-QP0)
-    var cp2y = cp1y + 1 / 3 * (p2y - p0y); // CP2 = CP1 + 1/3 *(QP2-QP0)
-    this.addBezierCurve(p0x, p0y, cp1x, cp1y, cp2x, cp2y, p2x, p2y);
-  },
-
-  addBezierCurve: function (p0x, p0y, p1x, p1y, p2x, p2y, p3x, p3y) {
-    // from http://blog.hackers-cafe.net/2009/06/how-to-calculate-bezier-curves-bounding.html
-    var
-      i,
-      p0 = [p0x, p0y],
-      p1 = [p1x, p1y],
-      p2 = [p2x, p2y],
-      p3 = [p3x, p3y];
-
-    this.addPoint(p0[0], p0[1]);
-    this.addPoint(p3[0], p3[1]);
-
-    for (i = 0; i <= 1; i++) {
-      var f = function (t) {
-        return Math.pow(1 - t, 3) * p0[i]
-          + 3 * Math.pow(1 - t, 2) * t * p1[i]
-          + 3 * (1 - t) * Math.pow(t, 2) * p2[i]
-          + Math.pow(t, 3) * p3[i];
-      };
-
-      var b = 6 * p0[i] - 12 * p1[i] + 6 * p2[i];
-      var a = -3 * p0[i] + 9 * p1[i] - 9 * p2[i] + 3 * p3[i];
-      var c = 3 * p1[i] - 3 * p0[i];
-
-      if (a == 0) {
-        if (b == 0) continue;
-        var t = -c / b;
-        if (0 < t && t < 1) {
-          if (i == 0) this.addX(f(t));
-          if (i == 1) this.addY(f(t));
-        }
-        continue;
-      }
-
-      var b2ac = Math.pow(b, 2) - 4 * c * a;
-      if (b2ac < 0) continue;
-      var t1 = (-b + Math.sqrt(b2ac)) / (2 * a);
-      if (0 < t1 && t1 < 1) {
-        if (i == 0) this.addX(f(t1));
-        if (i == 1) this.addY(f(t1));
-      }
-      var t2 = (-b - Math.sqrt(b2ac)) / (2 * a);
-      if (0 < t2 && t2 < 1) {
-        if (i == 0) this.addX(f(t2));
-        if (i == 1) this.addY(f(t2));
-      }
-    }
-  }
-
-};
-
-var TransformedBoundingBox = function(){
-  this._ts = [];
-  this._t = null;
-};
-sharedUtil.Util.inherit(TransformedBoundingBox, BoundingBox, {
-  clone: function() {
-    var n = Object.create(this);
-    n._ts = n._ts.slice(0);
-    return n;
-  },
-  addBB: function(bb) {
-    var _t = this._t;
-    this._t = null;
-    try{
-      this.addRect(bb.x1, bb.y1, bb.x2, bb.y2);
-    }finally{
-      this._t = _t;
-    }
-  },
-  pushTransform: function(t){
-    this._ts.push([t, this._t]);
-    if(this._t){
-      this._t = sharedUtil.Util.transform(this._t, t);
-    } else {
-      this._t = t;
-    }
-  },
-  popTransform: function(){
-    if(this._t){
-      var pop = this._ts.pop();
-      this._t = pop[1];
-      return pop[0];
-    }
-  },
-  addPoint: function(x, y){
-    if (this._t) {
-      var tf = sharedUtil.Util.applyTransform([x||0, y||0], this._t);
-      if(!isNaN(x)){
-        x = tf[0];
-      }
-      if(!isNaN(y)){
-        y = tf[1];
-      }
-    }
-    return BoundingBox.prototype.addPoint.apply(this, [x, y]);
-  }
-});
-
 var FONT_IDENTITY_MATRIX = sharedUtil.FONT_IDENTITY_MATRIX;
 var IDENTITY_MATRIX = sharedUtil.IDENTITY_MATRIX;
 var ImageKind = sharedUtil.ImageKind;
@@ -678,14 +517,13 @@ var SVGGraphics = (function SVGGraphicsClosure() {
         REVOPS[OPS[op]] = op;
       }
 
+      this.allStructs = operatorList.allStructs;
+      /*//TODO: remove the following
       var x = 0;
       if (fnArray[fnArray.length-1] === 200) {
         fnArrayLen--;
         this.allStructs = argsArray[argsArray.length-1][0];
-        //var m = {};
-        //Object.values(this.allStructs).forEach(function(struct){m[struct.S]= (m[struct.S] || 0)+1});
-        //console.log(m);
-      }
+      }*/
 
       var lastFnId, args;
       for (; x < fnArrayLen; x++) {
@@ -862,7 +700,7 @@ var SVGGraphics = (function SVGGraphicsClosure() {
                     this.pgrp = document.createElementNS(NS, 'svg:g'); // Parent group
                     this.pgrp.setAttribute("figure", p.id);
                     this._pgrp.appendChild(this.pgrp);
-                    var bb = new TransformedBoundingBox();
+                    var bb = new sharedUtil.TransformedBoundingBox();
                     bb.pushTransform(this.viewport.transform);
                     this.infigure = {id: p.id, bb: bb};
                     break;

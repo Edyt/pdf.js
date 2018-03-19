@@ -1182,6 +1182,10 @@ var PDFPageProxy = (function PDFPageProxyClosure() {
       }
       intentState.operatorList.lastChunk = operatorListChunk.lastChunk;
 
+      if (operatorListChunk.allStructs) {
+        intentState.operatorList.allStructs = operatorListChunk.allStructs;
+      }
+
       // Notify all the rendering tasks there are more operators to be consumed.
       for (i = 0; i < intentState.renderTasks.length; i++) {
         intentState.renderTasks[i].operatorListChanged();

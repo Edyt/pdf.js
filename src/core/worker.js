@@ -835,6 +835,7 @@ var WorkerMessageHandler = PDFJS.WorkerMessageHandler = {
 
     handler.on('RenderPageRequest', function wphSetupRenderPage(data) {
       var pageIndex = data.pageIndex;
+      data.structure = true;
       pdfManager.getPage(pageIndex).then(function(page) {
         var task = new WorkerTask('RenderPageRequest: page ' + pageIndex);
         startWorkerTask(task);

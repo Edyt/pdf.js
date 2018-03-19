@@ -449,7 +449,17 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
     this.xobjs = null;
     this.commonObjs = commonObjs;
     this.objs = objs;
+    /*imageLayer={
+      imageOnly: 1,
+      _images: {},
+      beginLayout: function(){},
+      endLayout: function(){},
+      appendImage: function(obj){
+        this._images[obj.id] = obj;
+      }
+    };*/
     this.imageLayer = imageLayer;
+    this.imageOnly = imageLayer && imageLayer.imageOnly;
     this.groupStack = [];
     this.processingType3 = null;
     // Patterns are painted relative to the initial page/form transform, see pdf
@@ -467,6 +477,8 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
       addContextCurrentTransform(canvasCtx);
     }
     this.cachedGetSinglePixelWidth = null;
+
+    this._mcCounter = 0;
   }
 
   function putBinaryImageData(ctx, imgData) {
@@ -789,6 +801,9 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
       var i = executionStartIdx || 0;
       var argsArrayLen = argsArray.length;
 
+      if (operatorList.allStructs && !this.allStructs) {
+          this.allStructs = operatorList.allStructs;
+      }
       // Sometimes the OperatorList to execute is empty.
       if (argsArrayLen === i) {
         return i;
@@ -1041,6 +1056,16 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
       var ctx = this.ctx;
       var current = this.current;
       var x = current.x, y = current.y;
+      var bb;
+      var draw = !this.imageOnly;
+      if (!draw) {
+        bb = this.infigure && this.infigure.bb;
+        //in imageOnly mode, only draw if within a figure
+        draw = !!bb;
+        if (bb) {
+          bb.pushTransform(ctx.mozCurrentTransform);
+        }
+      }
       for (var i = 0, j = 0, ii = ops.length; i < ii; i++) {
         switch (ops[i] | 0) {
           case OPS.rectangle:
@@ -1056,47 +1081,71 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
             }
             var xw = x + width;
             var yh = y + height;
-            this.ctx.moveTo(x, y);
-            this.ctx.lineTo(xw, y);
-            this.ctx.lineTo(xw, yh);
-            this.ctx.lineTo(x, yh);
-            this.ctx.lineTo(x, y);
-            this.ctx.closePath();
+            if (draw) {
+              this.ctx.moveTo(x, y);
+              this.ctx.lineTo(xw, y);
+              this.ctx.lineTo(xw, yh);
+              this.ctx.lineTo(x, yh);
+              this.ctx.lineTo(x, y);
+              this.ctx.closePath();
+            }
+            if (bb) {
+              bb.addRect(x, y, xw, yh);
+            }
             break;
           case OPS.moveTo:
             x = args[j++];
             y = args[j++];
-            ctx.moveTo(x, y);
+            draw && ctx.moveTo(x, y);
+            if (bb) {
+              bb.addPoint(x, y);
+            }
             break;
           case OPS.lineTo:
             x = args[j++];
             y = args[j++];
-            ctx.lineTo(x, y);
+            draw && ctx.lineTo(x, y);
+            if (bb) {
+              bb.addPoint(x, y);
+            }
             break;
           case OPS.curveTo:
             x = args[j + 4];
             y = args[j + 5];
-            ctx.bezierCurveTo(args[j], args[j + 1], args[j + 2], args[j + 3],
+            draw && ctx.bezierCurveTo(args[j], args[j + 1], args[j + 2], args[j + 3],
                               x, y);
+            if (bb) {
+              bb.addBezierCurve(x, y, args[j], args[j + 1], args[j + 2], args[j + 3], x, y);
+            }
             j += 6;
             break;
           case OPS.curveTo2:
-            ctx.bezierCurveTo(x, y, args[j], args[j + 1],
+            draw && ctx.bezierCurveTo(x, y, args[j], args[j + 1],
                               args[j + 2], args[j + 3]);
             x = args[j + 2];
             y = args[j + 3];
+            if (bb) {
+              bb.addBezierCurve(x, y, x, y, args[j], args[j + 1], x, y);
+            }
             j += 4;
             break;
           case OPS.curveTo3:
             x = args[j + 2];
             y = args[j + 3];
-            ctx.bezierCurveTo(args[j], args[j + 1], x, y, x, y);
+            draw && ctx.bezierCurveTo(args[j], args[j + 1], x, y, x, y);
+            if (bb) {
+              bb.addBezierCurve(x, y, args[j], args[j + 1], x, y, x, y);
+            }
             j += 4;
             break;
           case OPS.closePath:
-            ctx.closePath();
+            draw && ctx.closePath();
             break;
         }
+      }
+      if (bb) {
+        bb.popTransform();
+        this.infigure.vector = 1;
       }
       current.setCurrentPoint(x, y);
     },
@@ -1393,6 +1442,9 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
     },
 
     showText: function CanvasGraphics_showText(glyphs) {
+      if (this.imageOnly && !this.infigure) {
+        return;
+      }
       var current = this.current;
       var font = current.font;
       if (font.isType3Font) {
@@ -1532,6 +1584,14 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
       } else {
         current.x += x * textHScale;
       }
+      
+      var bb = this.infigure && this.infigure.bb;
+      if (bb) {
+        bb.pushTransform(ctx.mozCurrentTransform);
+        bb.addRect(0, 0, vertical ? fontSize : x, vertical ? -x : -fontSize);
+        bb.popTransform();
+      }
+
       ctx.restore();
     },
 
@@ -1563,6 +1623,13 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
 
       ctx.scale(textHScale, fontDirection);
 
+      var bb = this.infigure && this.infigure.bb;
+      if (bb) {
+        bb.pushTransform(ctx.mozCurrentTransform);
+        bb.addRect(0, 0, 0, -fontSize);
+        bb.popTransform();
+      }
+
       for (i = 0; i < glyphsLength; ++i) {
         glyph = glyphs[i];
         if (isNum(glyph)) {
@@ -1590,8 +1657,16 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
         width = transformed[0] * fontSize + spacing;
 
         ctx.translate(width, 0);
+
+        if (bb) {
+          bb.pushTransform(ctx.mozCurrentTransform);
+          bb.addPoint(0, 0);
+          bb.popTransform();
+        }
         current.x += width * textHScale;
       }
+
+
       ctx.restore();
       this.processingType3 = null;
     },
@@ -1897,7 +1972,19 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
 
       ctx.drawImage(domImage, 0, 0, domImage.width, domImage.height,
                     0, -h, w, h);
-      if (this.imageLayer) {
+      var bb = this.infigure && this.infigure.bb;
+      if (bb) {
+        var currentTransform = ctx.mozCurrentTransformInverse;
+        var position = this.getCanvasPosition(0, 0);
+        bb.addRect(position[0], position[1], 
+                   w / currentTransform[0] + position[0],
+                   h / currentTransform[3] + position[1]);
+        this.infigure.jpeg = 1;
+        /*bb.pushTransform(ctx.mozCurrentTransform);
+        bb.addRect(0, 0, 1, 1);
+        bb.popTransform();*/
+      }
+      /*if (this.imageLayer) {
         var currentTransform = ctx.mozCurrentTransformInverse;
         var position = this.getCanvasPosition(0, 0);
         this.imageLayer.appendImage({
@@ -1907,7 +1994,7 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
           width: w / currentTransform[0],
           height: h / currentTransform[3]
         });
-      }
+      }*/
       this.restore();
     },
 
@@ -2106,7 +2193,15 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
       ctx.drawImage(imgToPaint, 0, 0, paintWidth, paintHeight,
                                 0, -height, width, height);
 
-      if (this.imageLayer) {
+      var bb = this.infigure && this.infigure.bb;
+      if (bb) {
+        var position = this.getCanvasPosition(0, -height);
+        bb.addRect(position[0], position[1], 
+                   width / currentTransform[0] + position[0],
+                   height / currentTransform[3] + position[1]);
+        this.infigure.pixel = 1;
+      }
+      /*if (this.imageLayer) {
         var position = this.getCanvasPosition(0, -height);
         this.imageLayer.appendImage({
           imgData: imgData,
@@ -2115,7 +2210,7 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
           width: width / currentTransform[0],
           height: height / currentTransform[3]
         });
-      }
+      }*/
       this.restore();
     },
 
@@ -2129,6 +2224,7 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
       var tmpCtx = tmpCanvas.context;
       putBinaryImageData(tmpCtx, imgData);
 
+      var bb = this.infigure && this.infigure.bb;
       for (var i = 0, ii = map.length; i < ii; i++) {
         var entry = map[i];
         ctx.save();
@@ -2136,7 +2232,15 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
         ctx.scale(1, -1);
         ctx.drawImage(tmpCanvas.canvas, entry.x, entry.y, entry.w, entry.h,
                       0, -1, 1, 1);
-        if (this.imageLayer) {
+        if (bb) {
+          var position = this.getCanvasPosition(entry.x, entry.y);
+          bb.addRect(position[0], position[1], w + position[0], h + position[1]);
+          this.infigure.pixel = 1;
+          /*bb.pushTransform(ctx.mozCurrentTransform);
+          bb.addRect(0, 0, 1, 1);
+          bb.popTransform();*/
+        }
+        /*if (this.imageLayer) {
           var position = this.getCanvasPosition(entry.x, entry.y);
           this.imageLayer.appendImage({
             imgData: imgData,
@@ -2145,7 +2249,7 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
             width: w,
             height: h
           });
-        }
+        }*/
         ctx.restore();
       }
     },
@@ -2168,14 +2272,75 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
       // TODO Marked content.
     },
     beginMarkedContent: function CanvasGraphics_beginMarkedContent(tag) {
-      // TODO Marked content.
+      this._mcCounter++;
     },
     beginMarkedContentProps: function CanvasGraphics_beginMarkedContentProps(
                                         tag, properties) {
-      // TODO Marked content.
+      this._mcCounter++;
+      if (!tag || !this.allStructs || !this.imageOnly) {
+        return;
+      }
+      if (tag.MCID !== this.MCID) {
+        this.MCID = tag.MCID;
+        this.MCIDoffset = 0;
+      }
+      if (tag.MCID !== undefined && !this.infigure) {
+        var p = tag;
+        while (p) {
+          if(p.S === "Figure" || p.S === "InlineShape"){
+            var bb = new sharedUtil.TransformedBoundingBox();
+            this.infigure = {id: p.id, bb: bb};
+            return;
+          }
+          p = this.allStructs[p.parentid];
+        }
+      }
     },
     endMarkedContent: function CanvasGraphics_endMarkedContent() {
-      // TODO Marked content.
+      this._mcCounter--;
+      if (this._mcCounter) {
+        return;
+      }
+      this.MCID = undefined;
+      if (this.infigure) {
+        var bb = this.infigure.bb;
+        var w = bb.width();
+        var h = bb.height();
+        var l = bb.x1;
+        var t = bb.y1;
+
+        var imageLayer = this.imageLayer;
+        if(w * h){
+          var id = this.infigure.id;
+          var canvas = createScratchCanvas(w, h);
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(this.ctx.canvas, l, t, w, h, 0, 0, w, h);
+
+          var imgobj = this.infigure;
+          imgobj.bb = {l: l, t: t, w: w, h: h};
+          imgobj.canvas = canvas;
+          imageLayer.appendImage(imgobj);
+
+          if(0)
+          canvas.toBlob(function(blob){
+            if(!blob){
+              console.warn('no image data for pdf image', id, l, t, w, h);
+              return;
+            }
+            imageLayer.appendImage({id: id,
+                                   blob: blob,
+                                   l: l, t: t, w: w, h: h});
+            /*var href = URL.createObjectURL(blob);
+            var img = document.createElement('img');
+            img.width = w;
+            img.height = h;
+            img.src = href;
+            img.title = id;
+            document.body.appendChild(img);*/
+          });
+        }
+      }
+      this.infigure = null;
     },
 
     // Compatibility
@@ -2233,6 +2398,7 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
   return CanvasGraphics;
 })();
 
+PDFJS.CanvasGraphics = CanvasGraphics;
 exports.CanvasGraphics = CanvasGraphics;
 exports.createScratchCanvas = createScratchCanvas;
 }));

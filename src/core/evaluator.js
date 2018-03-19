@@ -1089,7 +1089,8 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
         }
 
         if (allStructs) {
-          operatorList.addOp(200, [allStructs]);
+          operatorList.allStructs = allStructs;
+          //operatorList.addOp(200, [allStructs]);
         }
         resolve();
       });
@@ -2560,11 +2561,13 @@ var OperatorList = (function OperatorListClosure() {
           fnArray: this.fnArray,
           argsArray: this.argsArray,
           lastChunk: lastChunk,
+          allStructs: this.allStructs,
           length: length
         },
         pageIndex: this.pageIndex,
         intent: this.intent
       }, transfers);
+      this.allStructs = null;
       this.dependencies = Object.create(null);
       this.fnArray.length = 0;
       this.argsArray.length = 0;

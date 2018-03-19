@@ -28,6 +28,7 @@
   z-index: -1;
 }
 
+.textLayer div.text-item,
 .textLayer div[textLayerDiv], .textLayer .alignedSelection {
   color: transparent;
   position: absolute;
@@ -40,6 +41,7 @@
   transform-origin: 0% 0%;
   font-weight: normal;
 }
+.sketchTarget .textLayer div.text-item,
 .sketchTarget .textLayer div[textLayerDiv], .sketchTarget.textLayer .alignedSelection {
   cursor: inherit;
 }

@@ -33,6 +33,8 @@ var createPromiseCapability = sharedUtil.createPromiseCapability;
 var CustomStyle = displayDOMUtils.CustomStyle;
 var PDFJS = sharedGlobal.PDFJS;
 
+var figureTypes = {figure: 1, inlineshape: 1, shape: 1};
+
 /**
  * Text layer render parameters.
  *
@@ -84,7 +86,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
     }
   }
 
-  function createParents(markedContent, textLayerFrag, structs, roleMap) {
+  function createParents(markedContent, textLayerFrag, structs, roleMap, images, pageIdx) {
       var firstparent = structs[markedContent.parentid];
       var parent = firstparent;
       var child;
@@ -107,6 +109,23 @@ var renderTextLayer = (function renderTextLayerClosure() {
             continue;
           }
           parent._element = document.createElement(type);
+          if (images && figureTypes[type.toLowerCase()]) {
+            if (images[parent.id]) {
+              //add a div under this figure element
+              var imgobj = images[parent.id];
+              var figdiv = document.createElement('div');
+              parent._element.appendChild(figdiv);
+              parent._element.setAttribute('pdfid', pageIdx + '/' + imgobj.id);
+              figdiv.className = 'pdf-image';
+              var fstyle = figdiv.style;
+              //fstyle.position = 'absolute';
+              var bb = imgobj.bb;
+              fstyle.top =  Math.floor(bb.t) + 'px';
+              fstyle.left =  Math.floor(bb.l) + 'px';
+              fstyle.width = Math.round(bb.w) + 'px';
+              fstyle.height = Math.round(bb.h) + 'px';
+            }
+          }
           if (child) {
             parent._element.appendChild(child._element);
           } else {
@@ -197,6 +216,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
     var capability = task._capability;
     var annotationsMap = task._annotationsMap;
     var textDivsLength = textDivs.length;
+    var images = task._images;
 
     // No point in rendering many divs as it would make the browser
     // unusable even after the divs are rendered.
@@ -219,8 +239,11 @@ var renderTextLayer = (function renderTextLayerClosure() {
     for (var i = 0; i < textDivsLength; i++) {
       var textDiv = textDivs[i];
       var textItem = textItems[i];
+      var parent = null;
       if (textItem.markedContent) {
         mcid = textItem.markedContent.MCID;
+        parent = createParents(textItem.markedContent, textLayerFrag,
+                  structs, roleMap, images, pageIdx);
       }else{
         mcid = null;
       }
@@ -245,9 +268,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
       var width = ctx.measureText(textDiv.textContent).width;
       if (width > 0) {
         textDiv.classList.add('text-item');
-        if (textItem.markedContent) {
-          var parent = createParents(textItem.markedContent, textLayerFrag,
-                                     structs, roleMap);
+        if (parent) {
           parent._element.appendChild(textDiv);
           var fullMCID = pageIdx + '/' + mcid;
           textDiv.setAttribute('MCID', fullMCID);
@@ -312,7 +333,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
   function TextLayerRenderTask(textContent, container, textAnnotationsLayerDiv,
                                annotationsMap,
                                viewport, textDivs,
-                               pageIdx) {
+                               pageIdx, images) {
     this._textContent = textContent;
     this._textAnnotationsLayerDiv = textAnnotationsLayerDiv;
     this._annotationsMap = annotationsMap;
@@ -321,6 +342,7 @@ var renderTextLayer = (function renderTextLayerClosure() {
     textDivs = textDivs || [];
     this._textDivs = textDivs;
     this._pageIdx = pageIdx;
+    this._images = images;
     this._canceled = false;
     this._capability = createPromiseCapability();
     this._renderTimer = null;
@@ -373,7 +395,8 @@ var renderTextLayer = (function renderTextLayerClosure() {
                                        renderParameters.annotationsMap,
                                        renderParameters.viewport,
                                        renderParameters.textDivs,
-                                       renderParameters.pageIdx);
+                                       renderParameters.pageIdx,
+                                       renderParameters.images);
     task._render(renderParameters.timeout);
     return task;
   }

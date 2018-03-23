@@ -1249,6 +1249,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
         textContentItem.initialized = true;
         if (currentMarkContent) {
           textContentItem.markedContent = currentMarkContent;
+          currentMarkContent.used = 1;
         }
         return textContentItem;
       }
@@ -1679,6 +1680,9 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                   });
                   //console.log(attrs, parent.get('S').name);
                 }
+                if(parent.get('S').name == 'Figure') {
+                  currentMarkContent.infigure = 1;
+                }
                 textContent.structs[parent.objId] = {
                   S: parent.get('S').name,
                   id: parent.objId,
@@ -1691,6 +1695,17 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
               }
               break;
             case OPS.endMarkedContent:
+              if (currentMarkContent && !currentMarkContent.used &&
+                  currentMarkContent.infigure) {
+                //if a drawing does not have any text in it, we need to create
+                //a fake text item so the text layer can render a div for this
+                //figure
+                flushTextContentItem();
+                textContentItem.initialized = true;
+                textContentItem.markedContent = currentMarkContent;
+                textContentItem.str.push(' ');
+                flushTextContentItem();
+              }
               currentMarkContent = null;
               break;
           } // switch

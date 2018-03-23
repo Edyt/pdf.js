@@ -460,6 +460,11 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
     };*/
     this.imageLayer = imageLayer;
     this.imageOnly = imageLayer && imageLayer.imageOnly;
+    if (this.imageOnly) {
+      this.captureImage = true;
+    } else {
+      this.captureImage = imageLayer && imageLayer.captureImage;
+    }
     this.groupStack = [];
     this.processingType3 = null;
     // Patterns are painted relative to the initial page/form transform, see pdf
@@ -2277,7 +2282,7 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
     beginMarkedContentProps: function CanvasGraphics_beginMarkedContentProps(
                                         tag, properties) {
       this._mcCounter++;
-      if (!tag || !this.allStructs || !this.imageOnly) {
+      if (!tag || !this.allStructs || !this.imageLayer) {
         return;
       }
       if (tag.MCID !== this.MCID) {
@@ -2312,13 +2317,14 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
         var imageLayer = this.imageLayer;
         if(w * h){
           var id = this.infigure.id;
-          var canvas = createScratchCanvas(w, h);
-          var ctx = canvas.getContext('2d');
-          ctx.drawImage(this.ctx.canvas, l, t, w, h, 0, 0, w, h);
-
           var imgobj = this.infigure;
           imgobj.bb = {l: l, t: t, w: w, h: h};
-          imgobj.canvas = canvas;
+          if (this.captureImage) {
+            var canvas = createScratchCanvas(w, h);
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(this.ctx.canvas, l, t, w, h, 0, 0, w, h);
+            imgobj.canvas = canvas;
+          }
           imageLayer.appendImage(imgobj);
 
           if(0)

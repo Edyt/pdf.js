@@ -21,7 +21,7 @@
     "test": "gulp lint",
     "prebuild": "npm prune & npm install",
     "build": "node make.js generic components",
-    "postbuild": "cpx build/generic/build/*.js build-dist/build",
+    "postbuild": "cpx 'build/generic/build/*.js' build-dist/build",
     "deploy": "cd build-dist && make-dir .git && npm version patch -m \"RELEASE: version %s\" && npm publish && rimraf .git && cd ..",
     "version": "git add build-dist/package.json",
     "postdeploy": "git push && git push --tags"

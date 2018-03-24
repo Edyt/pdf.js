@@ -806,7 +806,7 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
       var i = executionStartIdx || 0;
       var argsArrayLen = argsArray.length;
 
-      if (operatorList.allStructs && !this.allStructs) {
+      if (operatorList.allStructs) {
           this.allStructs = operatorList.allStructs;
       }
       // Sometimes the OperatorList to execute is empty.
@@ -2290,14 +2290,10 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
         this.MCIDoffset = 0;
       }
       if (tag.MCID !== undefined && !this.infigure) {
-        var p = tag;
-        while (p) {
-          if(p.S === "Figure" || p.S === "InlineShape"){
-            var bb = new sharedUtil.TransformedBoundingBox();
-            this.infigure = {id: p.id, bb: bb};
-            return;
-          }
-          p = this.allStructs[p.parentid];
+        var figure = this._checkParent(tag);
+        if (figure) {
+          var bb = new sharedUtil.TransformedBoundingBox();
+          this.infigure = {id: figure.id, bb: bb};
         }
       }
     },
@@ -2359,6 +2355,17 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
     },
 
     // Helper functions
+
+    _checkParent: function(tag){
+      var p = tag;
+        while (p) {
+          if(p.S === "Figure" || p.S === "InlineShape"){
+            //this.infigure = {id: p.id, bb: bb};
+            return p;
+          }
+          p = this.allStructs[p.parentid];
+        }
+    },
 
     consumePath: function CanvasGraphics_consumePath() {
       var ctx = this.ctx;

@@ -762,6 +762,12 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
       return new Promise(function next(resolve, reject) {
         task.ensureNotTerminated();
         timeSlotManager.reset();
+
+        if (allStructs) {
+          operatorList.allStructs = allStructs;
+          //operatorList.addOp(200, [allStructs]);
+        }
+
         var stop, operation = {}, i, ii, cs;
         while (!(stop = timeSlotManager.check())) {
           // The arguments parsed by read() are used beyond this loop, so we
@@ -1088,10 +1094,6 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
           operatorList.addOp(OPS.restore, []);
         }
 
-        if (allStructs) {
-          operatorList.allStructs = allStructs;
-          //operatorList.addOp(200, [allStructs]);
-        }
         resolve();
       });
     },

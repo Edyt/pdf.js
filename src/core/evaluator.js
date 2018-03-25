@@ -1682,7 +1682,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                   });
                   //console.log(attrs, parent.get('S').name);
                 }
-                if(parent.get('S').name == 'Figure') {
+                if(sharedUtil.isFigure(parent.get('S').name)) {
                   currentMarkContent.infigure = 1;
                 }
                 textContent.structs[parent.objId] = {

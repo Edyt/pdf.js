@@ -979,6 +979,11 @@ var Util = PDFJS.Util = (function UtilClosure() {
     document.getElementsByTagName('head')[0].appendChild(script);
   };
 
+  var figures = {"Figure": 1, "InlineShape": 1};
+  Util.isFigure = function(n) {
+    return !!figures[n];
+  }
+
   return Util;
 })();
 
@@ -2581,6 +2586,7 @@ exports.TextRenderingMode = TextRenderingMode;
 exports.UnexpectedResponseException = UnexpectedResponseException;
 exports.UnknownErrorException = UnknownErrorException;
 exports.Util = Util;
+exports.isFigure = Util.isFigure;
 exports.XRefParseException = XRefParseException;
 exports.arrayByteLength = arrayByteLength;
 exports.arraysToBytes = arraysToBytes;

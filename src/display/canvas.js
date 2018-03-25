@@ -2359,8 +2359,7 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
     _checkParent: function(tag){
       var p = tag;
         while (p) {
-          if(p.S === "Figure" || p.S === "InlineShape"){
-            //this.infigure = {id: p.id, bb: bb};
+          if (sharedUtil.isFigure(p.S)) {
             return p;
           }
           p = this.allStructs[p.parentid];

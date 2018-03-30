@@ -1061,15 +1061,14 @@ var CanvasGraphics = (function CanvasGraphicsClosure() {
       var ctx = this.ctx;
       var current = this.current;
       var x = current.x, y = current.y;
-      var bb;
+      var bb = this.infigure && this.infigure.bb;
       var draw = !this.imageOnly;
       if (!draw) {
-        bb = this.infigure && this.infigure.bb;
         //in imageOnly mode, only draw if within a figure
         draw = !!bb;
-        if (bb) {
-          bb.pushTransform(ctx.mozCurrentTransform);
-        }
+      }
+      if (bb) {
+        bb.pushTransform(ctx.mozCurrentTransform);
       }
       for (var i = 0, j = 0, ii = ops.length; i < ii; i++) {
         switch (ops[i] | 0) {

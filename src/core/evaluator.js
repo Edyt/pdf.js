@@ -1672,16 +1672,7 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                   //reached StructTreeRoot
                   break;
                 }
-                var attrs = null;
-                if (parent.has('A')) {
-                  attrs = {};
-                  parent.get('A').forEach(function(k, v){
-                    if (k && v) {
-                      attrs[k.toLowerCase()] = v.name ? v.name.toLowerCase() : v;
-                    }
-                  });
-                  //console.log(attrs, parent.get('S').name);
-                }
+                var attrs = Util.getAttrs(parent, xref);
                 if(sharedUtil.isFigure(parent.get('S').name)) {
                   currentMarkContent.infigure = 1;
                 }

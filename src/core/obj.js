@@ -329,19 +329,10 @@ var Catalog = (function CatalogClosure() {
           if (obj.has('K')) {
             elemobj.children = [].concat(obj.get('K'));
           }
-          var attrs = null;
-          if (obj.has('A')) {
-            attrs = {};
-            obj.get('A').forEach(function(k, v){
-              if (k && v) {
-                attrs[k.toLowerCase()] = v.name ? v.name.toLowerCase() : v;
-              }
-            });
-            //console.log(attrs, obj.get('S').name);
-            if(attrs.baselineshift || attrs.textdecorationtype){
-              //only set attrs if either of these recognized styling is present
-              elemobj.attrs = attrs;
-            }
+          var attrs = Util.getAttrs(obj, this.xref);
+          if (attrs && (attrs.baselineshift || attrs.textdecorationtype)) {
+            //only set attrs if either of these recognized styling is present
+            elemobj.attrs = attrs;
           }
         } else if (type.name === 'MCR') {
           var page = obj.getRaw('Pg');

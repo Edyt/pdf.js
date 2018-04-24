@@ -982,7 +982,31 @@ var Util = PDFJS.Util = (function UtilClosure() {
   var figures = {"Figure": 1, "InlineShape": 1};
   Util.isFigure = function(n) {
     return !!figures[n];
-  }
+  };
+
+  Util.getAttrs = function getAttrs(obj, xref) {
+    var attrs = null;
+    if (obj.has('A')) {
+      attrs = {};
+      var process = function(k, v){
+        if (k && v) {
+          if (k.toLowerCase){
+            attrs[k.toLowerCase()] = v.name ? v.name.toLowerCase() : v;
+          } else {
+            var o = xref.fetchIfRef(k);
+            if (o && o.map) {
+              Object.keys(o.map).forEach(function(k) {
+                process(k, o.map[k]);
+              });
+            }
+          }
+        }
+      }
+      obj.get('A').forEach(process);
+      //console.log(attrs, obj.get('S').name);
+    }
+    return attrs;
+  };
 
   return Util;
 })();

@@ -1657,14 +1657,13 @@ var PartialEvaluator = (function PartialEvaluatorClosure() {
                 break;
               }
               var mcid = args[1].map.MCID;
-              //Apple Pages app may generate beginmarked without MCID,
-              //just ignore these
-              if(mcid === undefined){
-                break;
+
+              var parent;
+              if (structParents) {
+                parent = structParents[mcid];
               }
-              var parent = structParents[mcid];
               currentMarkContent = {
-                type: args[0].name, MCID: mcid, parentid: parent.objId
+                type: args[0].name, MCID: mcid, parentid: parent && parent.objId
               };
               while (parent && !(parent.objId in textContent.structs)) {
                 var grandparent = parent.get('P');
